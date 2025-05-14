@@ -20,13 +20,58 @@ attachment::att_amend_desc()
 
 ## Add modules ----
 ## Create a module infrastructure in R/
-golem::add_module(name = "name_of_module1", with_test = TRUE) # Name of the module
-golem::add_module(name = "name_of_module2", with_test = TRUE) # Name of the module
+golem::add_module(name = "leer_sf") # Name of the module
+golem::add_module(name = "downfiles") # Name of the module
+golem::add_module(name = "header_config")
+golem::add_utils("server")
+golem::add_fct("functions")
+golem::add_utils("ui")
+golem::add_utils(name = "get", module = "PredRodArea")
+golem::add_module("PredRodArea")
+golem::add_module("st_order")
+golem::add_module("check_carto")
+golem::add_fct("fun", module = "check_carto")
+golem::add_module("add_attr")
+golem::add_module("get_carto_digital")
+golem::add_module("apendices", utils = "")
+golem::add_module("bd_flora")
+golem::add_module("tabla_attr_rodal")
+
+
+usethis::use_pipe(export = T)
+usethis::use_package('bsplus')
+usethis::use_package('dplyr')
+usethis::use_package('dataPAS')
+usethis::use_package('flexlsx')
+usethis::use_package('flextable')
+usethis::use_package('ftExtra')
+usethis::use_package('igraph')
+usethis::use_package('janitor')
+usethis::use_package('openxlsx2')
+usethis::use_package('osmdata')
+usethis::use_package('purrr')
+usethis::use_package('plyr')
+usethis::use_package('sf')
+usethis::use_package('shinyalert')
+usethis::use_package('shinybusy')
+usethis::use_package('shinydashboard')
+usethis::use_package('shinydashboardPlus')
+usethis::use_package('shinyEffects')
+usethis::use_package('shinyjs')
+usethis::use_package('shinyWidgets')
+usethis::use_package('stringr')
+usethis::use_package('stringi')
+usethis::use_package('terra')
+usethis::use_package('tibble')
+usethis::use_package('tidyr')
+usethis::use_package('tools')
+usethis::use_package('units')
+usethis::use_package('zip')
 
 ## Add helper functions ----
 ## Creates fct_* and utils_*
-golem::add_fct("helpers", with_test = TRUE)
-golem::add_utils("helpers", with_test = TRUE)
+golem::add_fct("helpers", with_test = F)
+golem::add_utils("helpers", with_test = F)
 
 ## External resources
 ## Creates .js and .css files at inst/app/www
