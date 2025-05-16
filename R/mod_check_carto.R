@@ -16,7 +16,7 @@ mod_check_carto_ui <- function(id) {
     mod_leer_sf_ui(ns("sf_check"),"Ingrese Shapefile"),
     tags$div(style = "margin-top: -10px"),
     shinyWidgets::pickerInput(
-      inputId = "select_sf_check",
+      inputId = ns("select_sf_check"),
       label = "Seleccione la capa a la que corresponde el shapefile",
       choices = c(
         "Área",
@@ -33,7 +33,7 @@ mod_check_carto_ui <- function(id) {
       options = list(title = "Selecciona una opción")
     ),
     shinyWidgets::actionBttn(
-      inputId = "check_carto",
+      inputId = ns("check_carto"),
       label = "Chequear",
       style = "unite",
       size = "sm",

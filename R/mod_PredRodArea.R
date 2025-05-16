@@ -7,13 +7,12 @@
 #' @noRd
 #'
 #' @importFrom sf st_drop_geometry
-#' @importFrom dplyr rename_all rename_if group_by summarise_at filter
+#' @importFrom dplyr rename_all rename_if group_by summarise_at filter count
 #' @importFrom shiny NS tagList renderUI reactive observe observeEvent uiOutput renderUI eventReactive req tags
 #' @importFrom shinyWidgets pickerInput materialSwitch actionBttn numericInputIcon updatePickerInput
 #' @importFrom stringi stri_trans_general stri_cmp_equiv stri_detect_regex stri_trans_totitle stri_opts_brkiter
 #' @importFrom shinyjs reset disable enable
-#' @importFrom shinyalert shinyalert
-#' @importFrom shinybusy notify_success notify_warning show_modal_spinner remove_modal_spinner
+#' @importFrom shinybusy notify_warning show_modal_spinner remove_modal_spinner report_warning
 #'
 mod_PredRodArea_ui <- function(id) {
   ns <- NS(id)
@@ -75,7 +74,7 @@ mod_PredRodArea_ui <- function(id) {
 #' PredRodArea Server Functions
 #'
 #' @noRd
-mod_PredRodArea_server <- function(id, crs, dec_sup, provincia, PAS){
+mod_PredRodArea_server <- function(id, crs, dec_sup, provincia, PAS, huso){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
     # GENERAR ÁREAS DE CORTA ----
@@ -94,18 +93,31 @@ mod_PredRodArea_server <- function(id, crs, dec_sup, provincia, PAS){
         dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("ley.*20283", case_insensitive = T), ~ "Regulacion")
     })
     observeEvent(LB(),{
-      if(!all(c('Tipo_fores', 'Subtipo_fo', 'Tipo_veg', 'Regulacion') %in% names(LB()))){
-        shinyalerta(names_act = names(sf::st_drop_geometry(LB())), names_req = c('Tipo_fores', 'Subtipo_fo', 'Tipo_veg', 'Regulacion'))
-        shinyjs::reset(id = "linea_base")
-      } else {
-        shinybusy::notify_success("Perfecto!", timeout = 3000, position = "right-bottom")
-      }
+      check_input(
+        x = LB(),
+        names_req = c('Tipo_fores', 'Subtipo_fo', 'Tipo_veg', 'Regulacion'),
+        huso = huso,
+        id = "linea_base-sf_file"
+      )
       if (!'PID' %in% names(LB())){
         shinybusy::notify_warning("Campo 'PID' será creado", timeout = 3000, position = "right-bottom")
       }
+      shinyWidgets::updatePickerInput(
+        session = session,
+        inputId = "group_by_LB",
+        choices = names(LB())[!names(LB()) == "geometry"]
+      )
     })
 
     obras <- mod_leer_sf_server(id = "obras", crs = crs)
+    observeEvent(obras(),{
+      check_input(
+        x = obras(),
+        names_req = NULL,
+        huso = huso,
+        id = "obras-sf_file"
+      )
+    })
 
     predios <- mod_leer_sf_server(id = "predios", crs = crs, fx = function(x){
       x %>%
@@ -115,11 +127,12 @@ mod_PredRodArea_server <- function(id, crs, dec_sup, provincia, PAS){
         dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("^prop", case_insensitive = T), ~ "Propietari")
     })
     observeEvent(predios(),{
-      if(!all(c('N_Predio','Nom_Predio','Rol','Propietari') %in% names(predios()))){
-        shinyalerta(names_act = names(sf::st_drop_geometry(predios())), names_req = c('N_Predio', 'Nom_Predio', 'Rol', 'Propietari'))
-      } else {
-        shinybusy::notify_success("Perfecto!", timeout = 3000, position = "right-bottom")
-      }
+      check_input(
+        x = predios(),
+        names_req = c('N_Predio', 'Nom_Predio', 'Rol', 'Propietari'),
+        huso = huso,
+        id = "predios-sf_file"
+      )
     })
 
     suelos <- mod_leer_sf_server(id = "suelos", crs = crs, fx = function(x){
@@ -128,12 +141,20 @@ mod_PredRodArea_server <- function(id, crs, dec_sup, provincia, PAS){
         dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("desceros|cat_erosio|clase_eros", case_insensitive = T), ~ "Clase_Eros")
     })
     observeEvent(suelos(),{
-      if(PAS == 148 && !all(c('Clase_Uso') %in% names(suelos()))){
-        shinyalerta(names_act = names(sf::st_drop_geometry(suelos())), names_req = c('Clase_Uso'))
-      } else if (PAS == 151 && !all(c('Clase_Eros') %in% names(suelos()))) {
-        shinyalerta(names_act = names(sf::st_drop_geometry(suelos())), names_req = c('Clase_Eros'))
+      if(PAS == 148){
+        check_input(
+          x = suelos(),
+          names_req = c('Clase_Uso'),
+          huso = huso,
+          id = "suelos-sf_file"
+        )
       } else {
-        shinybusy::notify_success("Perfecto!", timeout = 3000, position = "right-bottom")
+        check_input(
+          x = suelos(),
+          names_req = ('Clase_Eros'),
+          huso = huso,
+          id = "suelos-sf_file"
+        )
       }
     })
 
@@ -159,19 +180,11 @@ mod_PredRodArea_server <- function(id, crs, dec_sup, provincia, PAS){
       }
     })
 
-    observeEvent(LB(),{
-      shinyWidgets::updatePickerInput(
-        session = session,
-        inputId = ns("group_by_LB"),
-        choices = names(LB())[!names(LB()) == "geometry"]
-      )
-    })
-
     observeEvent(input$ord_rodales,{
       output$ord_rodales_UI <- renderUI({
         if (input$ord_rodales) {
           shinyWidgets::pickerInput(
-            inputId = "orden_rodales",
+            inputId = ns("orden_rodales"),
             label = "Ordenar de:",
             choices = c("NS-EO","NS-OE","SN-EO","SN-OE","EO-NS","EO-SN","OE-NS","OE-SN"),
             selected = "NS-OE"
@@ -223,12 +236,13 @@ mod_PredRodArea_server <- function(id, crs, dec_sup, provincia, PAS){
       req(areas_prop())
       gc(reset = T)
       shinybusy::remove_modal_spinner()
+      shinybusy::notify_success(text = "Listo!", timeout = 3000, position = "right-bottom")
     })
 
     observe({
       req(areas_prop())
       if (any(areas_prop()$Rodales %>% dplyr::group_by(N_Rodal) %>% dplyr::summarise_at("Sup_ha", sum) %>% .$Sup_ha < 0.5) & PAS == 148) {
-        shinyalert::shinyalert(
+        shinybusy::report_warning(
           title = "OJO!. Rodales de bosque menores a 0,5 ha",
           text = paste0(
             "Los siguientes rodales de BN presentan una superficie inferior a 0,5 ha:\n",
@@ -239,15 +253,11 @@ mod_PredRodArea_server <- function(id, crs, dec_sup, provincia, PAS){
               .$N_Rodal %>%
               shQuote() %>%
               paste0(collapse = ", ")
-          ),
-          type = "warning",
-          closeOnEsc = T,
-          showConfirmButton = T,
-          animation = T
+          )
         )
       }
       if (any(areas_prop()$Rodales %>% dplyr::group_by(N_Rodal) %>% dplyr::summarise_at("Sup_ha", sum) %>% .$N_Rodal < 1) & PAS == 151) {
-        shinyalert::shinyalert(
+        shinybusy::report_warning(
           title = "OJO!. Rodales de FX menores a 1 ha",
           text = paste0(
             "Los siguientes rodales presentan una superficie inferior a 1 ha:\n",
@@ -258,11 +268,22 @@ mod_PredRodArea_server <- function(id, crs, dec_sup, provincia, PAS){
               .$N_Rodal %>%
               shQuote() %>%
               paste0(collapse = ", ")
-          ),
-          type = "warning",
-          closeOnEsc = T,
-          showConfirmButton = T,
-          animation = T
+          )
+        )
+      }
+      if (nrow(areas_prop()$Rodales %>% dplyr::count(N_Rodal)) >
+          nrow(areas_prop()$Rodales %>% dplyr::count(N_Rodal) %>% .[areas_prop()$Areas, ])) {
+        shinybusy::report_warning(
+          title = "Rodales sin áreas",
+          text = paste0(
+            "Los siguientes rodales sobran:\n",
+            setdiff(
+              areas_prop()$Rodales %>% dplyr::count(N_Rodal) %>% .$N_Rodal,
+              areas_prop()$Rodales %>% dplyr::count(N_Rodal) %>% .[areas_prop()$Areas, ] %>% .$N_Rodal
+            ) %>%
+              shQuote() %>%
+              paste(collapse = ", ")
+          )
         )
       }
     })

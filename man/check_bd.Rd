@@ -4,14 +4,14 @@
 \alias{check_bd_flora}
 \title{Chequeo Bases de Datos}
 \usage{
-check_bd_flora(x, y = NULL, shinyalert = F)
+check_bd_flora(x, y = NULL, shiny = F)
 }
 \arguments{
 \item{x}{Base de datos de flora}
 
 \item{y}{Capa}
 
-\item{shinyalert}{Logico; usar \code{TRUE} en una shiny app. Default \code{FALSE}}
+\item{shiny}{Logico; si es \code{TRUE}, devuelve una alerta en un modulo de shiny.}
 }
 \value{
 Devuelve alertas impresas en la consola o bien en modulos de shiny.

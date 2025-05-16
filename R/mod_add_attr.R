@@ -55,7 +55,7 @@ mod_add_attr_ui <- function(id) {
 #' add_attr Server Functions
 #'
 #' @noRd
-mod_add_attr_server <- function(id, crs){
+mod_add_attr_server <- function(id){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
@@ -106,7 +106,7 @@ mod_add_attr_server <- function(id, crs){
     observeEvent(hidro(),{
       shinyWidgets:updatePickerInput(
         session = session,
-        inputId = ns("campos"),
+        inputId = "campos",
         choices = hidro() %>% sf::st_drop_geometry() %>% names()
       )
     })

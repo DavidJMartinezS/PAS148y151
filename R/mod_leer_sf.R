@@ -7,6 +7,7 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
+#' @importFrom shinyjs reset
 #' @importFrom tools file_ext file_path_sans_ext
 #' @importFrom sf read_sf st_zm st_make_valid
 #'
@@ -34,7 +35,7 @@ mod_leer_sf_server <- function(id, crs = NULL, fx = NULL, path = F, ...){
            input$sf_file$name %>% tools::file_path_sans_ext() %>% unique() %>% length() == 1 &
            length(input$sf_file$datapath) >= 4)) {
         unlink(input$sf_file$datapath)
-        reset(id = "sf_file")
+        shinyjs::reset(id = "sf_file")
         return(NULL)
       } else {
         if (path) {

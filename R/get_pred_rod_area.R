@@ -54,7 +54,7 @@ get_pred_rod_area <- function(
   stopifnot(c("N_Predio", "Nom_Predio") %in% names(predios) %>% all())
   stopifnot(PAS %in% c(148, 151))
   if (PAS == 148) {
-    stopifnot(c("Nom_Predio", "Clase_Uso") %in% names(suelos) %>% all())
+    stopifnot(c("Clase_Uso") %in% names(suelos) %>% all())
     var_suelo <- dplyr::sym("Clase_Uso")
   }
   if (PAS == 151) {

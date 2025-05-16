@@ -17,7 +17,7 @@
 mod_apendices_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    tags$div(style = "margin-bottom: -10x"),
+    tags$div(style = "margin-top: -10x"),
     tags$h3("Apéndices", style = "font-weight: bold;"),
     tags$div(
       id = "inline",
@@ -56,9 +56,14 @@ mod_apendices_ui <- function(id) {
     div(style = "margin-top: 10px"),
     tags$div(
       style = "margin-left: -15px",
-      mod_downfiles_ui(ns("tabla_attr_rodal_0"), label = "Tabla atributación de rodales", style = "material-flat", icon = "file-excel"),
+      mod_downfiles_ui(
+        ns("tabla_attr_rodal_0"),
+        label = "Tabla atributación de rodales",
+        style = "material-flat",
+        icon = "file-excel"
+      )
     ),
-    tags$div(style = "margin-top: 10px"),
+    tags$div(style = "margin-top: 15px"),
     fileInput(
       inputId = ns("tabla_attr_rodal"),
       label = "Ingresar tabla con los atributos de rodal definitiva y revisada",
@@ -277,9 +282,11 @@ mod_apendices_server <- function(id, PAS, provincia, huso, crs, inputs, carto){
         dplyr::select(dplyr::matches('Nombre_cientifico|UTM_E|UTM_N|Categoria|Decreto'))
     })
     observeEvent(bd_fauna(),{
-      if(!all(c('Nombre_cientifico', 'UTM_E', 'UTM_N', 'Categoria', 'Decreto') %in% names(bd_fauna()))){
-        shinyalerta(names_act = names(bd_fauna()), names_req = c('Nombre_cientifico', 'UTM_E', 'UTM_N', 'Categoria', 'Decreto'))
-      }
+      check_input(
+        x = bd_fauna(),
+        names_req = c('Nombre_cientifico', 'UTM_E', 'UTM_N', 'Categoria', 'Decreto'),
+        id = "bd_fauna"
+      )
     })
 
     apendice_5 <- eventReactive(input$get_apendice_5_btn,{

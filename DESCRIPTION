@@ -12,6 +12,7 @@ Imports:
     dplyr,
     flexlsx,
     flextable,
+    fresh,
     ftExtra,
     golem,
     igraph,

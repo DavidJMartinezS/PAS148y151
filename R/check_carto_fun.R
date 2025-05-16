@@ -11,7 +11,7 @@
 #' @export
 #'
 #' @importFrom shiny tags
-#' @importFrom shinyalert shinyalert
+#' @importFrom shinybusy report_success report_warning report_failure
 #'
 check_carto <- function(x, id, shiny = F){
   list_check <- list(
@@ -36,31 +36,22 @@ check_carto <- function(x, id, shiny = F){
   if((names_req %in% names_act) %>% all()){
     if((names_req == names_act) %>% all()){
       if (shiny) {
-        shinyalert::shinyalert(
+        shinybusy::report_success(
           title = "Perfecto!",
-          text = "Campos en concordancia con los requerimientos de CONAF",
-          type = "success",
-          closeOnEsc = T,
-          showConfirmButton = T,
-          animation = TRUE
+          text = "Campos en concordancia con los requerimientos de CONAF"
         )
       } else {
         cat("\033[32mPerfecto!","\U0001F601", "Campos en concordancia con los requerimientos de CONAF", "\n")
       }
     } else if(length(names_act) > length(names_req)){
       if (shiny) {
-        shinyalert::shinyalert(
+        shinybusy::report_warning(
           title = "Problemas!",
           text = paste0(
             "Shapefile con otros campos adicionales a los requeridos ", tags$br(), tags$br(),
             tags$b("Requeridos: "), paste0(names_req %>% shQuote(), collapse = ", "), tags$br(), tags$br(),
             tags$b("Sobran: "), paste0(setdiff(names_req, names_act) %>% shQuote(), collapse = ", ")
-          ),
-          type = "warning",
-          html = TRUE,
-          closeOnEsc = T,
-          showConfirmButton = T,
-          animation = TRUE
+          )
         )
       } else {
         cat(
@@ -71,18 +62,13 @@ check_carto <- function(x, id, shiny = F){
       }
     } else {
       if (shiny) {
-        shinyalert::shinyalert(
+        shinybusy::report_warning(
           title = "Problemas!",
           text = paste0(
             "Shapefile con los campos requeridos pero desordenados", tags$br(), tags$br(),
             tags$b("\nActual: "), paste0(names_act %>% shQuote(), collapse = ", "), tags$br(), tags$br(),
             tags$b("\nCorrecto: "), paste0(names_req %>% shQuote(), collapse = ", ")
-          ),
-          type = "warning",
-          html = TRUE,
-          closeOnEsc = T,
-          showConfirmButton = T,
-          animation = TRUE
+          )
         )
       } else {
         cat(
@@ -94,17 +80,13 @@ check_carto <- function(x, id, shiny = F){
     }
   } else {
     if (shiny) {
-      shinyalert::shinyalert(
+      shinybusy::report_failure(
         title = "Error!",
         text = paste0(
           "Shapefile sin los campos requeridos", tags$br(), tags$br(),
           tags$b("Requeridos: "), paste0(names_req %>% shQuote(), collapse = ", "), tags$br(), tags$br(),
           tags$b("Faltan: "), paste0(setdiff(names_act, names_req) %>% shQuote(), collapse = ", ")
-        ),
-        type = "error",
-        closeOnEsc = T,
-        showConfirmButton = T,
-        animation = TRUE
+        )
       )
     } else {
       cat(

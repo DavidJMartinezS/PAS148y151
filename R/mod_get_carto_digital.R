@@ -8,11 +8,10 @@
 #'
 #' @importFrom shiny NS tagList tags fileInput uiOutput textInput observeEvent numericInput uiOutput renderUI reactive observe eventReactive req
 #' @importFrom shinyWidgets materialSwitch actionBttn switchInput pickerInput numericInputIcon
-#' @importFrom shinyalert shinyalert
 #' @importFrom shinyjs enable disable
-#' @importFrom shinybusy show_modal_spinner remove_modal_spinner report_failure
+#' @importFrom shinybusy show_modal_spinner remove_modal_spinner report_warning
 #' @importFrom sf st_transform st_make_valid st_union st_centroid st_coordinates st_as_text st_geometry
-#' @importFrom dplyr rename_if mutate if_else rename_all
+#' @importFrom dplyr rename_if mutate rename_all
 #' @importFrom stringi stri_detect_regex stri_trans_toupper stri_trans_general
 mod_get_carto_digital_ui <- function(id) {
   ns <- NS(id)
@@ -100,6 +99,7 @@ mod_get_carto_digital_ui <- function(id) {
 mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inputs, carto){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
+
     # AREAS DE CORTA  ----
     areas_def <- mod_leer_sf_server(id = "cart_area", crs = crs, fx = function(x){
       x %>%
@@ -109,56 +109,36 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
         dplyr::mutate(Tipo_Bos = "BN")
     })
     observeEvent(areas_def(),{
-      if(!all(c('Nom_Predio', 'N_Area', 'Clase_Uso') %in% names(areas_def()))){
-        shinyalerta(names_act = names(areas_def()), names_req = c('Nom_Predio', 'N_Area'))
-      }
-      if((areas_def() %>% sf::st_transform(4326) %>% sf::st_make_valid() %>% sf::st_union() %>% sf::st_centroid() %>% sf::st_coordinates() %>% .[,1] >= -72 & huso == "18S") |
-         (areas_def() %>% sf::st_transform(4326) %>% sf::st_make_valid() %>% sf::st_union() %>% sf::st_centroid() %>% sf::st_coordinates() %>% .[,1] < -72 & huso == "19S")){
-        shinyalert::shinyalert(
-          title = "Ups!",
-          text = "Coordenadas del shp no coinciden con la seleccionada",
-          type = "error",
-          closeOnEsc = T,
-          showConfirmButton = T,
-          animation = T
-        )
-      }
+      check_input(
+        x = areas_def(),
+        names_req = c('Nom_Predio', 'N_Area', 'Clase_Uso'),
+        huso = huso,
+        id = "cart_area-sf_file"
+      )
       inputs$areas_def <- areas_def()
     })
 
     # RODALES ----
     rodales_def <- mod_leer_sf_server(id = "cart_rodales", crs = crs)
     observeEvent(rodales_def(),{
-      if(!all(c('N_Rodal', 'Tipo_For') %in% names(rodales_def()))){
-        shinyalerta(names_act = names(rodales_def()), names_req = c('N_Rodal', 'Tipo_For'))
-      }
-      if((rodales_def() %>% sf::st_transform(4326) %>% sf::st_make_valid() %>% sf::st_union() %>% sf::st_centroid() %>% sf::st_coordinates() %>% .[,1] >= -72 & huso == "18S") |
-         (rodales_def() %>% sf::st_transform(4326) %>% sf::st_make_valid() %>% sf::st_union() %>% sf::st_centroid() %>% sf::st_coordinates() %>% .[,1] < -72 & huso == "19S")){
-        shinybusy::report_failure(
-          "Ups!",
-          "Coordenadas del shp no coinciden con la seleccionada"
-        )
-      }
+      check_input(
+        x = rodales_def(),
+        names_req = c('N_Rodal', 'Tipo_For'),
+        huso = huso,
+        id = "cart_rodales-sf_file"
+      )
       inputs$rodales_def <- rodales_def()
     })
 
     # PREDIOS
     predios_def <- mod_leer_sf_server(id = "cart_predios", crs = crs)
     observeEvent(predios_def(),{
-      if(!all(c('N_Predio', 'Nom_Predio', 'Rol', 'Propietari') %in% names(predios_def()))){
-        shinyalerta(names_act = names(predios_def()), names_req = c('N_Predio', 'Nom_Predio', 'Rol', 'Propietari'))
-      }
-      if((predios_def() %>% sf::st_transform(4326) %>% sf::st_make_valid() %>% sf::st_union() %>% sf::st_centroid() %>% sf::st_coordinates() %>% .[,1] >= -72 & huso == "18S") |
-         (predios_def() %>% sf::st_transform(4326) %>% sf::st_make_valid() %>% sf::st_union() %>% sf::st_centroid() %>% sf::st_coordinates() %>% .[,1] < -72 & huso == "19S")){
-        shinyalert::shinyalert(
-          title = "Ups!",
-          text = "Coordenadas del shp no coinciden con la seleccionada",
-          type = "error",
-          closeOnEsc = T,
-          showConfirmButton = T,
-          animation = T
-        )
-      }
+      check_input(
+        x = predios_def(),
+        names_req = c('N_Predio', 'Nom_Predio', 'Rol', 'Propietari'),
+        huso = huso,
+        id = "cart_predios-sf_file"
+      )
       inputs$predios_def <- predios_def()
     })
 
@@ -169,8 +149,26 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
           tags$div(
             tags$div(
               id = "flex",
-              tags$div(id = "inline", shinyWidgets::pickerInput(inputId = "cut_cam", label = "Corte", choices = c("clip", "buffer", "crop", "crop_by_row"), selected = "clip")),
-              tags$div(id = "inline", numericInput(inputId = "buffer_cam", label = "Buffer", value = 0, step = 10, width = "100px"), style = "margin-left: 25px;"),
+              tags$div(
+                id = "inline",
+                shinyWidgets::pickerInput(
+                  inputId = ns("cut_cam"),
+                  label = "Corte",
+                  choices = c("clip", "buffer", "crop", "crop_by_row"),
+                  selected = "clip"
+                )
+              ),
+              tags$div(
+                id = "inline",
+                numericInput(
+                  inputId = ns("buffer_cam"),
+                  label = "Buffer",
+                  value = 0,
+                  step = 10,
+                  width = "100px"
+                ),
+                style = "margin-left: 25px;"
+              ),
               tags$div(tags$b("m"), style = "margin-top: 10px;"),
               style = "margin-top: -10px; margin-bottom: 5px"
             ),
@@ -180,7 +178,7 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
               ") ¿Desea crear otra capa de caminos a partir de información de Google?"
             ),
             shinyWidgets::switchInput(
-              inputId = "add_cam_osm",
+              inputId = ns("add_cam_osm"),
               size = "mini",
               onLabel = "Si",
               offLabel = "No",
@@ -267,7 +265,8 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
     # BD FLORA ----
     bd_flora <- mod_bd_flora_server("bd_flora", rodales_def = rodales_def())
     observeEvent(bd_flora(),{
-      check_bd_flora(x = bd_flora(), shinyalert = T)
+
+      check_bd_flora(x = bd_flora(), shiny = T)
 
       df <- reactive({
         bd_flora() %>%
@@ -285,7 +284,7 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
       })
 
       if (df() %>% nrow() >= 1) {
-        shinyalert::shinyalert(
+        shinybusy::report_warning(
           title = "ECC arbórea en las parcelas",
           text = paste0(
             "Ojo con las siguientes especies y parcelas:\n",
@@ -301,11 +300,7 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
               }} %>%
               tidyr::unite("SP", 1:3, remove = T, sep = " ") %>%
               dplyr::pull(SP) %>% paste0(collapse = "\n")
-          ),
-          type = "error",
-          closeOnEsc = T,
-          showConfirmButton = T,
-          animation = T
+          )
         )
       }
 
@@ -332,11 +327,11 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
       if (input$add_uso_actual) {
         mod_leer_sf_server(
           id = "catastro",
-          crs = crs(),
+          crs = crs,
           fx = function(x){
             x %>%
               dplyr::rename_all(
-                ~ dplyr::if_else(
+                ~ ifelse(
                   . == "geometry",
                   .,
                   stringi::stri_trans_toupper(stringi::stri_trans_general(.,"Latin-ASCII"))
@@ -350,9 +345,12 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
       }
     })
     observeEvent(catastro(),{
-      if(!all(c('USO', 'SUBUSO', 'ESTRUCTURA') %in% names(catastro()))){
-        shinyalerta(names_act = names(catastro()), names_req = c('USO', 'SUBUSO', 'ESTRUCTURA'))
-      }
+      check_input(
+        x = catastro(),
+        names_req = c('USO', 'SUBUSO', 'ESTRUCTURA'),
+        huso = huso,
+        id = "catastro-sf_file"
+      )
     })
 
     suelos_uso_act <- reactive({
@@ -360,7 +358,7 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
       if (input$add_uso_actual) {
         mod_leer_sf_server(
           id = "suelos_uso_act",
-          crs = crs(),
+          crs = crs,
           fx = function(x){
             x %>%
               dplyr::rename_if(
@@ -375,9 +373,12 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
       }
     })
     observeEvent(suelos_uso_act(),{
-      if(!all(c('Clase_Uso') %in% names(suelos_uso_act()))){
-        shinyalerta(names_act = names(suelos_uso_act()), names_req = c('Clase_Uso'))
-      }
+      check_input(
+        x = suelos_uso_act(),
+        names_req = c('Clase_Uso'),
+        huso = huso,
+        id = "suelos_uso_act-sf_file"
+      )
     })
 
     # CARTOGRAFÍA DIGITAL ----
@@ -403,7 +404,7 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
         catastro = catastro(),
         suelos = suelos_uso_act(),
         add_caminos = input$add_cam,
-        add_caminos_osm = inputs$add_cam_osm,
+        add_caminos_osm = input$add_cam_osm,
         caminos_arg = if(input$add_cam == F) list(cut = "clip", buffer = 0) else list(cut = input$cut_cam, buffer = input$buffer_cam),
         add_hidro = input$add_hidro,
         fuente_hidro = input$fuente_hidro,
@@ -436,11 +437,12 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
       if(input$add_uso_actual) arto$uso_actual <- carto_digital()$Uso_actual
       gc()
       shinybusy::remove_modal_spinner()
+      shinybusy::notify_success(text = "Listo!", timeout = 3000, position = "right-bottom")
     })
 
     mod_downfiles_server(
       id = "down_carto",
-      x = carto_digital(),#[-c(which(names(carto_digital()) %in% c("tabla_predios","tabla_areas")))],
+      x = carto_digital(),
       name_save = c(
         "Area",
         "Rodales",
@@ -470,14 +472,6 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
           )
         )
     )
-
-    # return(
-    #   list(
-        # areas_def = areas_def(),
-    #     rodales_def = rodales_def(),
-    #     predios_def = predios_def()
-    #   )
-    # )
   })
 }
 

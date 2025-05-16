@@ -1,9 +1,24 @@
+.left-side, .main-sidebar {padding-top: 50px}
+
+#logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+#logo > a:hover {
+  background-color: transparent !important;
+  color: transparent !important;
+}
+
 .small-box {
   height: 120px;
 }
+
 .progress-bar{
-  background-color:#3c763d
+  background-color:#69A897;
 }
+
 #flex {
   display:flex;
 }
@@ -14,4 +29,45 @@
 }
 #inline .form-group{
   display: table-row;
+}
+
+/* Estilos para el contenedor principal del accordion */
+#accordion .panel-group {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+/* Estilos para el encabezado de cada append */
+#accordion .panel-heading a {
+  font-size: 1.1em; /* Agrandar la letra */
+  font-weight: bold; /* Texto en negrita */
+  display: block; /* Asegura que el enlace ocupe todo el ancho */
+  padding: 10px 15px; /* Espaciado interno */
+  background-color: #f0f0f0; /* Color de fondo del encabezado */
+  color: #333; /* Color del texto del encabezado */
+  text-decoration: none; /* Eliminar subrayado del enlace */
+  border-bottom: 1px solid #ddd; /* Borde inferior del encabezado */
+}
+
+/* Estilos para el encabezado cuando está activo (abierto) */
+#accordion .panel-heading a[aria-expanded='true'] {
+  background-color: #e0e0e0; /* Un tono ligeramente más oscuro al abrir */
+}
+
+/* Estilos para el cuerpo (contenido) de cada append */
+#accordion .panel-collapse .panel-body {
+  padding: 15px;
+  border-top: 1px solid #ddd; /* Borde superior del contenido */
+}
+
+/* Estilos para las listas dentro del contenido */
+#accordion .panel-body ul {
+  list-style-type: disc; /* Estilo de los puntos de la lista */
+  padding-left: 20px;
+}
+
+#accordion .panel-body li {
+  margin-bottom: 5px;
+  font-size: 1em; /* Tamaño de letra de los items de la lista */
 }

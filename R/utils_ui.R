@@ -5,7 +5,6 @@
 #' @return The return value, if any, from executing the utility.
 #'
 #' @importFrom bsplus bs_accordion bs_set_opts bs_append bs_carousel bs_set_data shinyInput_label_embed shiny_iconlink bs_embed_tooltip bs_carousel_image
-#' @importFrom shinyalert shinyalert
 #'
 #' @noRd
 info_dashboard <- function(){
@@ -99,7 +98,7 @@ info_dashboard <- function(){
                 "Apéndices",
                 tags$ul(
                   list_to_li(c(
-                    tags$p(
+                    paste0(
                       "Corroborar que exista una nomenclatura única en los nombres de las especies y no aparezcan por ejemplo:",
                       tags$em('Acacia caven'), "y", tags$em('Vachellia caven, Lithrea caustica'), "y", tags$em('Lithraea caustica'),", etc."
                     ),
@@ -123,12 +122,12 @@ info_dashboard <- function(){
 info_cut_buffer <- function(){
   bsplus::bs_carousel(id = "hidro_example", use_indicators = T, use_controls = T) %>%
     bsplus::bs_set_data(interval = FALSE) %>%
-    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "https://github.com/DavidJMartinezS/PAS148/blob/main/www/clip.png?raw=true")) %>%
-    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "https://github.com/DavidJMartinezS/PAS148/blob/main/www/buffer_2000.png?raw=true")) %>%
-    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "https://github.com/DavidJMartinezS/PAS148/blob/main/www/crop.png?raw=true")) %>%
-    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "https://github.com/DavidJMartinezS/PAS148/blob/main/www/crop_2000.png?raw=true")) %>%
-    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "https://github.com/DavidJMartinezS/PAS148/blob/main/www/crop_by_row.png?raw=true")) %>%
-    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "https://github.com/DavidJMartinezS/PAS148/blob/main/www/crop_by_row_2000.png?raw=true"))
+    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/clip.png")) %>%
+    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/buffer_2000.png")) %>%
+    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop.png")) %>%
+    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop_2000.png")) %>%
+    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop_by_row.png")) %>%
+    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop_by_row_2000.png"))
 }
 
 #' @noRd
@@ -142,18 +141,20 @@ add_help_text <- function(x, ...){
 }
 
 #' @noRd
-shinyalerta <- function(names_act, names_req){
-  shinyalert::shinyalert(
-    title = "Ups!",
-    html = TRUE,
-    text = tags$p(
-      "Shapefile sin los campos requeridos", tags$br(), tags$br(),
-      tags$b("Requeridos: "), paste0(names_req %>% shQuote(), collapse = ", "), tags$br(), tags$br(),
-      tags$b("Faltan: "), paste0(setdiff(names_req, names_act) %>% shQuote(), collapse = ", ")
-    ),
-    type = "error",
-    closeOnEsc = T,
-    showConfirmButton = T,
-    animation = T
+mytheme <- fresh::create_theme(
+  fresh::adminlte_color(
+    green = "#69A897",
+  ),
+  fresh::adminlte_sidebar(
+    # width = "400px",
+    dark_bg = "#222D32",
+    dark_hover_bg = "#1E282C",
+    dark_hover_color = "#F1FCF2",
+    dark_color = "#B8C7CE"
+  ),
+  fresh::adminlte_global(
+    content_bg = "#ECF0F5",
+    box_bg = "#FFFFFF",
+    info_box_bg = "#FFFFFF"
   )
-}
+)
