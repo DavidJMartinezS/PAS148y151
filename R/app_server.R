@@ -164,7 +164,7 @@ app_server <- function(input, output, session) {
   areas_prop <- eventReactive(input$get_area,{
     req(LB(), obras(), predios(), suelos())
     get_pred_rod_area(
-      PAS = PAS,
+      PAS = input$PAS,
       LB = LB(),
       obras = obras(),
       predios = predios(),
@@ -185,7 +185,7 @@ app_server <- function(input, output, session) {
     req(LB(), obras(), predios(), suelos())
     shinybusy::show_modal_spinner(
       spin = "flower",
-      color = "#35978F",
+      color = "#6FB58F",
       text = tags$div(
         tags$br(),
         tags$p(
@@ -450,7 +450,7 @@ app_server <- function(input, output, session) {
         ~ stringi::stri_trim(stringi::stri_trans_totitle(., opts_brkiter = stringi::stri_opts_brkiter(type = "sentence")))
       ) %>%
       dplyr::mutate_at("N_ind", as.integer) %>%
-      {if (PAS == 148) {
+      {if (input$PAS == 148) {
         .[] %>%
           dplyr::filter(
             Habito %>%
@@ -489,7 +489,7 @@ app_server <- function(input, output, session) {
 
     df_ecc <- reactive({
       bd_flora() %>%
-        {if (PAS == 148) {
+        {if (input$PAS == 148) {
           .[] %>% dplyr::filter(
             Habito %>% stringi::stri_trans_general("Latin-ASCII") %>% stringi::stri_detect_regex("arbol", case_insensitive = T),
             RCE %>% stringi::stri_trans_toupper() %not_in% c(NA_character_, "---")
@@ -639,7 +639,7 @@ app_server <- function(input, output, session) {
     req(c(areas_def(), rodales_def(), predios_def(), bd_flora()))
     shinybusy::show_modal_spinner(
       spin = "flower",
-      color = "#35978F",
+      color = "#6FB58F",
       text = tags$div(
         tags$br(),
         tags$p(
@@ -750,7 +750,7 @@ app_server <- function(input, output, session) {
   apendices_2y3 <- eventReactive(input$get_apendices_2y3_btn,{
     req(c(bd_flora(), rodales_def(), predios_def()))
     apendice_2_3(
-      PAS = PAS,
+      PAS = input$PAS,
       bd_flora = bd_flora(),
       bd_pcob = bd_pcob(),
       rodales = rodales_def(),
@@ -765,7 +765,7 @@ app_server <- function(input, output, session) {
     req(bd_flora(), rodales_def(), predios_def())
     shinybusy::show_modal_spinner(
       spin = "flower",
-      color = "#35978F",
+      color = "#6FB58F",
       text = tags$div(
         tags$br(),
         tags$p(
@@ -845,9 +845,9 @@ app_server <- function(input, output, session) {
     )
   })
 
-  observeEvent(PAS,{
+  observeEvent(input$PAS,{
     output$bd_fauna_ui <- renderUI({
-      if (PAS == 148) {
+      if (input$PAS == 148) {
         fileInput(
           inputId = "bd_fauna",
           label = "Ingresar BD de fauna (opcional)",
@@ -894,8 +894,8 @@ app_server <- function(input, output, session) {
     ))
     if (input$PAS == 148) {
       apendice_5_PAS148(
-        bd_flora = inputs$bd_flora,
-        rodales = inputs$rodales_def,
+        bd_flora = input$bd_flora,
+        rodales = input$rodales_def,
         tabla_predios = carto$tabla_predios,
         tabla_areas = carto$tabla_areas,
         tabla_attr_rodal = tabla_attr_rodal(),
@@ -907,8 +907,8 @@ app_server <- function(input, output, session) {
       )
     } else {
       apendice_5_PAS148(
-        bd_flora = inputs$bd_flora,
-        rodales = inputs$rodales_def,
+        bd_flora = input$bd_flora,
+        rodales = input$rodales_def,
         tabla_predios = carto$tabla_predios,
         tabla_areas = carto$tabla_areas,
         tabla_attr_rodal = tabla_attr_rodal(),
@@ -929,7 +929,7 @@ app_server <- function(input, output, session) {
     ))
     shinybusy::show_modal_spinner(
       spin = "flower",
-      color = "#35978F",
+      color = "#6FB58F",
       text = tags$div(
         tags$br(),
         tags$p(

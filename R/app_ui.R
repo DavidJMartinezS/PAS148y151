@@ -21,41 +21,44 @@ app_ui <- function(request) {
       shinydashboardPlus::dashboardHeader(
         leftUi = tagList(
           tags$div(
+            id = "head_style",
             shinyWidgets::radioGroupButtons(
               inputId = "PAS",
               choiceNames = c("PAS 148", "PAS 151"),
               choiceValues = c(148, 151),
               selected = 148,
-              status = "success"
-            ),
-            style = "margin-left: 10px;"
+              status = "primary"
+            )
           ),
-          shinyWidgets::dropdownButton(
-            label = "Ajustes bases",
-            icon = icon("gear"),
-            status = "success",
-            circle = F,
-            tags$span(
-              id = "flex",
-              shinyWidgets::prettyRadioButtons(
-                inputId = "huso",
-                label = "Huso:  ",
-                choices = c("18S", "19S"),
-                selected = "19S",
-                inline = TRUE,
-                status = "success",
-                fill = TRUE,
-                animation = "smooth"
-              ),
-              tags$div(
-                numericInput(
-                  inputId = "n_dec",
-                  label = "N° decimales superficie:",
-                  value = 2,
-                  min = 0,
-                  max = 4
+          tags$div(
+            id = "head_style",
+            shinyWidgets::dropdownButton(
+              label = "Ajustes bases",
+              icon = icon("gear"),
+              status = "primary",
+              circle = F,
+              tags$span(
+                id = "flex",
+                shinyWidgets::prettyRadioButtons(
+                  inputId = "huso",
+                  label = "Huso:  ",
+                  choices = c("18S", "19S"),
+                  selected = "19S",
+                  inline = TRUE,
+                  status = "primary",
+                  fill = TRUE,
+                  animation = "smooth",
                 ),
-                style = "margin-left: 20px;"
+                tags$div(
+                  numericInput(
+                    inputId = "n_dec",
+                    label = "N° decimales superficie:",
+                    value = 2,
+                    min = 0,
+                    max = 4
+                  ),
+                  style = "margin-left: 20px;"
+                )
               )
             )
           ),
@@ -66,7 +69,7 @@ app_ui <- function(request) {
               label = "Provincia:",
               choices = provincias_list,
               selected = NULL,
-              options = shinyWidgets::pickerOptions(container = "body", style = "btn-success"),
+              options = shinyWidgets::pickerOptions(container = "body", style = "btn-primary"),
             ),
             style = "color: white; margin-left: 10px;"
           )
@@ -90,7 +93,7 @@ app_ui <- function(request) {
         )
       ),
       shinydashboard::dashboardBody(
-        # fresh::use_theme(mytheme),
+        fresh::use_theme(mytheme),
         shinyjs::useShinyjs(),
         bsplus::use_bs_popover(),
         bsplus::use_bs_tooltip(),
@@ -117,7 +120,7 @@ app_ui <- function(request) {
                   title = "Tipos de corte para caminos, hidrografáa y curvas de nivel",
                   solidHeader = T,
                   status = "success",
-                  height = "400px",
+                  # height = "400px",
                   info_cut_buffer()
                 )
               )
@@ -275,7 +278,7 @@ app_ui <- function(request) {
                     status = "success"
                   ) %>%
                     add_help_text(title = "Puede hacer que tarde mucho en ejecutarse la función"),
-                  uiOutput(ns("add_uso_actual_ui")),
+                  uiOutput("add_uso_actual_ui"),
                   tags$div(style = "margin-top: -10px"),
                   tags$hr(),
 

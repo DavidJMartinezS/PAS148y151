@@ -335,7 +335,7 @@ mod_apendices_server <- function(id, PAS, provincia, huso, crs, inputs, carto){
       ))
       shinybusy::show_modal_spinner(
         spin = "flower",
-        color = "#35978F",
+        color = "#6FB58F",
         text = tags$div(
           tags$br(),
           tags$p(

@@ -69,6 +69,16 @@ info_dashboard <- function(){
                     dividida por su geometría, de lo contrario no se divide el poligono pero queda el campo con las dos CUS."
                   ))
                 )
+              ),
+              tags$li(
+                "Añadir atributos de pendiente e hidrografía",
+                tags$ul(
+                  list_to_li(c(
+                    "Ingrese shp que al que desea agregar los atributos y seleccione los atributos que desea agregar.
+                    Ingresar el o los archivos necesarios para agregar los campos.",
+                    "Lo campos que se agregan de pendiente son; 'Pend_media' y 'Ran_Pend', y de hidrografía 'Distancia' y los campos que se seleccionen."
+                  ))
+                )
               )
             )
           ),
@@ -143,14 +153,17 @@ add_help_text <- function(x, ...){
 #' @noRd
 mytheme <- fresh::create_theme(
   fresh::adminlte_color(
-    green = "#69A897",
+    # green = "#69A897"
+    # green = "#B3C0A4"
+    # green = "#a5c3a7"
+    green = "#6FB58F"
   ),
   fresh::adminlte_sidebar(
     # width = "400px",
-    dark_bg = "#222D32",
-    dark_hover_bg = "#1E282C",
-    dark_hover_color = "#F1FCF2",
-    dark_color = "#B8C7CE"
+    dark_bg = "#343A40",
+    dark_hover_bg = "#494E53",
+    dark_hover_color = "#FFFFFF",
+    dark_color = "#C2C7D0"
   ),
   fresh::adminlte_global(
     content_bg = "#ECF0F5",
