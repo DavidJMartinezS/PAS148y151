@@ -32,7 +32,6 @@ Imports:
     shinyjs,
     shinyWidgets,
     stringi,
-    stringr,
     terra,
     tibble,
     tidyr,

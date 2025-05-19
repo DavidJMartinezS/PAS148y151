@@ -24,7 +24,7 @@ wb_portada_kimal <- function(wb, PAS, apendice, provincia) {
     apendice,
     "2" = "APÉNDICE 2. Densiadad de especies",
     "3" = "APÉNDICE 3. Coordenadas ubicación de parcelas",
-    "5" = "APENDICE 5. Tablas formulario CONAF"
+    "5" = "APÉNDICE 5. Tablas formulario CONAF"
   )
 
   wb <- wb %>%
@@ -79,7 +79,7 @@ wb_portada_default <- function(wb, PAS, apendice, nom_proj = NULL, provincia){
     apendice,
     "2" = "APÉNDICE 2. Densiadad de especies",
     "3" = "APÉNDICE 3. Coordenadas ubicación de parcelas",
-    "5" = "APENDICE 5. Tablas formulario CONAF"
+    "5" = "APÉNDICE 5. Tablas formulario CONAF"
   )
 
   wb <- wb %>%
