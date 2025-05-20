@@ -337,7 +337,7 @@ app_ui <- function(request) {
                   solidHeader = T,
                   status = "success",
                   # mod_apendices_ui("apendices")
-                  tags$div(style = "margin-top: -10x"),
+                  tags$div(style = "margin-top: -10px"),
                   tags$h3("Apéndices", style = "font-weight: bold;"),
                   tags$div(
                     id = "inline",

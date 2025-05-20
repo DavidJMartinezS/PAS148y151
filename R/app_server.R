@@ -203,6 +203,7 @@ app_server <- function(input, output, session) {
 
   observeEvent(areas_prop(),{
     req(areas_prop())
+
     if (any(areas_prop()$Rodales %>% dplyr::group_by(N_Rodal) %>% dplyr::summarise_at("Sup_ha", sum) %>% .$Sup_ha < 0.5) & input$PAS == 148) {
       shinybusy::report_warning(
         title = "OJO!. Rodales de bosque menores a 0,5 ha",
@@ -248,9 +249,9 @@ app_server <- function(input, output, session) {
         )
       )
     }
+    mod_downfiles_server(id = "down_areas", x = areas_prop(), name_save = c("Rodales_propuestos", "Areas_propuestas", "Predios_propuestos"))
   })
 
-  mod_downfiles_server(id = "down_areas", x = areas_prop(), name_save = c("Rodales_propuestos", "Areas_propuestas", "Predios_propuestos"))
 
   ## Ordenar shp ----
   mod_st_order_server("st_order")
@@ -259,7 +260,7 @@ app_server <- function(input, output, session) {
   mod_check_carto_server("check_carto")
 
   ## Agregar pend e hidro ----
-  mod_add_attr_server("add_attr")
+  mod_add_attr_server("add_attr", PAS = input$PAS)
 
   # CARTO y APENDICES ----
   ## Cartografia digital ----
@@ -599,7 +600,7 @@ app_server <- function(input, output, session) {
     )
   })
 
-  ### Generar carto ----
+  ### Generar y descargar carto ----
   shinyjs::disable("get_carto_btn")
   observe({
     req(c(areas_def(), rodales_def(), predios_def(), bd_flora()))
@@ -653,41 +654,42 @@ app_server <- function(input, output, session) {
     gc()
     shinybusy::remove_modal_spinner()
     shinybusy::notify_success(text = "Listo!", timeout = 3000, position = "right-bottom")
+
+    mod_downfiles_server(
+      id = "down_carto",
+      x = carto_digital(),
+      name_save = c(
+        "Area",
+        "Rodales",
+        "Limite_Predial",
+        "Suelos",
+        "Rangos_pend",
+        "Tabla_predios",
+        "Tabla_areas",
+        "Parcela",
+        "Uso_actual",
+        "Caminos",
+        "Caminos_osm",
+        "Hidrografia",
+        "Hidrografia_osm",
+        "Curvas_niv"
+      ) %>%
+        str_c(.,input$NOMPREDIO, sep = "_") %>%
+        subset(
+          c(rep(T, 7),
+            input$add_parcelas,
+            input$add_uso_actual,
+            input$add_cam,
+            if(input$add_cam == F) F else input$add_cam_osm,
+            input$add_hidro,
+            if(input$add_hidro == F) F else input$add_hidro_osm,
+            input$add_curv_niv
+          )
+        )
+    )
   })
 
-  ### Descargar carto ----
-  mod_downfiles_server(
-    id = "down_carto",
-    x = carto_digital(),
-    name_save = c(
-      "Area",
-      "Rodales",
-      "Limite_Predial",
-      "Suelos",
-      "Rangos_pend",
-      "Tabla_predios",
-      "Tabla_areas",
-      "Parcela",
-      "Uso_actual",
-      "Caminos",
-      "Caminos_osm",
-      "Hidrografia",
-      "Hidrografia_osm",
-      "Curvas_niv"
-    ) %>%
-      str_c(.,input$NOMPREDIO, sep = "_") %>%
-      subset(
-        c(rep(T, 7),
-          input$add_parcelas,
-          input$add_uso_actual,
-          input$add_cam,
-          if(input$add_cam == F) F else input$add_cam_osm,
-          input$add_hidro,
-          if(input$add_hidro == F) F else input$add_hidro_osm,
-          input$add_curv_niv
-        )
-      )
-  )
+
 
   # Apendices ----
   ## Apendice 2 Y 3 ----
@@ -779,18 +781,17 @@ app_server <- function(input, output, session) {
     gc()
     shinybusy::remove_modal_spinner()
     shinybusy::notify_success(text = "Listo!", timeout = 3000, position = "right-bottom")
+    mod_downfiles_server(
+      id = "down_apendices_2",
+      x = apendices_2y3()[[1]],
+      name_save = c("APÉNDICE 2. Densiadad de especies")
+    )
+    mod_downfiles_server(
+      id = "down_apendices_3",
+      x = apendices_2y3()[[2]],
+      name_save = c("APÉNDICE 3. Coordenadas ubicación de parcelas")
+    )
   })
-
-  mod_downfiles_server(
-    id = "down_apendices_2",
-    x = apendices_2y3()[[1]],
-    name_save = c("APÉNDICE 2. Densiadad de especies")
-  )
-  mod_downfiles_server(
-    id = "down_apendices_3",
-    x = apendices_2y3()[[2]],
-    name_save = c("APÉNDICE 3. Coordenadas ubicación de parcelas")
-  )
 
   ## Atributos de rodal ----
   tabla_attr_rodal_0 <- reactive({
@@ -806,11 +807,13 @@ app_server <- function(input, output, session) {
     openxlsx2::read_xlsx(input$tabla_attr_rodal$datapath)
   })
 
-  mod_downfiles_server(
-    id = "tabla_attr_rodal_0",
-    x = tabla_attr_rodal_0(),
-    name_save = c("Tabla atributacion de rodales")
-  )
+  observeEvent(tabla_attr_rodal_0,{
+    mod_downfiles_server(
+      id = "tabla_attr_rodal_0",
+      x = tabla_attr_rodal_0(),
+      name_save = c("Tabla atributacion de rodales")
+    )
+  })
 
   ## Apendice 5 ----
   shinyjs::disable("get_apendice_5_btn")
@@ -943,20 +946,19 @@ app_server <- function(input, output, session) {
     gc()
     shinybusy::remove_modal_spinner()
     shinybusy::notify_success(text = "Listo!", timeout = 3000, position = "right-bottom")
+    mod_downfiles_server(
+      id = "down_apendice_5",
+      x = apendice_5(),
+      name_save = c("APÉNDICE 5. Tablas formulario CONAF")
+    )
   })
-
-  mod_downfiles_server(
-    id = "down_apendice_5",
-    x = apendice_5(),
-    name_save = c("APÉNDICE 5. Tablas formulario CONAF")
-  )
 
   # Autor ----
   output$user <- shinydashboardPlus::renderUser({
     shinydashboardPlus::dashboardUser(
       name = "David Martínez",
       image = "https://avatars.githubusercontent.com/u/74486319?s=400&u=c277213b232af5e7710bebdc7a50bb9426ab9a62&v=4",
-      title = "Dashboard PAS 148-151",
+      title = "Autor Dashboard PAS 148/151",
       subtitle = "Autor",
       footer = fluidRow(
         tags$p(

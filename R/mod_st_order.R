@@ -85,15 +85,21 @@ mod_st_order_server <- function(id){
       shinybusy::show_modal_spinner(
         spin = "flower",
         color = "#35978F",
-        text = tags$div(tags$br(), tags$p("Generando campo 'ID_ord' con la numeración.", tags$br(), " Por favor espere, esto puede tardar un poco"))
+        text = tags$div(
+          tags$br(),
+          tags$p(
+            "Generando campo 'ID_ord' con la numeración.",
+            tags$br(),
+            " Por favor espere, esto puede tardar un poco"
+          )
+        )
       )
       req(shp_ordered())
       gc(reset = T)
       shinybusy::remove_modal_spinner()
       shinybusy::notify_success("Shapefile ordenado!", timeout = 3000, position = "right-bottom")
+      mod_downfiles_server(id = "down_sf_ordered", x = shp_ordered(), name_save = paste0(shp_to_order_name(),"_ord"))
     })
-
-    mod_downfiles_server(id = "down_sf_ordered", x = shp_ordered(), name_save = paste0(shp_to_order_name(),"_ord"))
   })
 }
 

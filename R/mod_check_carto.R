@@ -19,7 +19,7 @@ mod_check_carto_ui <- function(id) {
       inputId = ns("select_sf_check"),
       label = "Seleccione la capa a la que corresponde el shapefile",
       choices = c(
-        "Área",
+        "Áreas",
         "Caminos",
         "Curvas de nivel",
         "Hidrografía",
@@ -60,7 +60,7 @@ mod_check_carto_server <- function(id){
 
     observeEvent(input$check_carto,{
       req(shp_check(), input$select_sf_check)
-      check_carto(x = shp_check(), id = input$select_sf_check)
+      check_carto(x = shp_check(), id = input$select_sf_check, shiny = T)
     })
   })
 }

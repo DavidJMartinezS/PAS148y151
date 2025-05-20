@@ -22,7 +22,7 @@
 #' @importFrom janitor round_half_up
 #'
 group_by_distance <- function(x, distance){
-  stopifnot("El objeto ingresado no es un objeto de la clase 'sf'." = !inherits(x, "sf"))
+  stopifnot("El objeto ingresado no es un objeto de la clase 'sf'." = inherits(x, "sf") || inherits(x, "sfc"))
   dist_matrix = sf::st_distance(x, by_element = FALSE)
   class(dist_matrix) = NULL
   connected = dist_matrix <= distance
@@ -33,17 +33,23 @@ group_by_distance <- function(x, distance){
 #' @rdname spatial_functions
 #' @export
 my_union <- function(x, y) {
-  stopifnot("El objeto ingresado no es un objeto de la clase 'sf'." = !inherits(x, "sf"))
-  stopifnot("El objeto ingresado no es un objeto de la clase 'sf'." = !inherits(y, "sf"))
+  stopifnot("El objeto ingresado no es un objeto de la clase 'sf'." = inherits(x, "sf"))
+  stopifnot("El objeto ingresado no es un objeto de la clase 'sf'." = inherits(y, "sf"))
   sf::st_agr(x) = "constant"
   sf::st_agr(y) = "constant"
-  x %>% sf::st_difference(sf::st_union(sf::st_combine(y))) %>% dplyr::bind_rows(sf::st_intersection(x, y))
+  x %>%
+    sf::st_difference(sf::st_union(sf::st_combine(y))) %>%
+    st_collection_extract("POLYGON") %>%
+    dplyr::bind_rows(
+      sf::st_intersection(x, y) %>%
+        st_collection_extract("POLYGON")
+    )
 }
 
 #' @rdname spatial_functions
 #' @export
 get_slope <- function (dem, x) {
-  stopifnot("El objeto ingresado no es un objeto de la clase 'sf'." = !inherits(x, "sf"))
+  stopifnot("El objeto ingresado no es un objeto de la clase 'sf'." = inherits(x, "sf") || inherits(x, "sfc"))
   stopifnot("DEM debe ser un objeto SpatRaster o bien la ruta del archivo" = (class(dem) %in% c("character", "SpatRaster")) %>% any())
   if (inherits(dem, "character")) {
     stopifnot("ruta del archivo no encontrada" = file.exists(dem))

@@ -10,7 +10,7 @@
 #' @importFrom shinyWidgets materialSwitch actionBttn pickerInput updatePickerInput
 #' @importFrom shinyjs enable disable
 #' @importFrom sf st_crs st_drop_geometry st_geometry st_distance st_nearest_feature
-#' @importFrom dplyr mutate case_when bind_cols syms
+#' @importFrom dplyr mutate case_when bind_cols syms relocate last_col
 #' @importFrom purrr map_dbl
 #' @importFrom units drop_units
 #' @importFrom janitor round_half_up
@@ -28,7 +28,7 @@ mod_add_attr_ui <- function(id) {
       status = "success"
     ) %>%
       add_help_text("Crea o actualiza los campos 'Pend_media' y 'Ran_Pend'"),
-    uiOutput("add_pend_info_ui"),
+    uiOutput(ns("add_pend_info_ui")),
     shinyWidgets::materialSwitch(
       inputId = ns("add_hidro_info"),
       label = "¿Agregar distancia a los cursos de agua?",
@@ -47,7 +47,7 @@ mod_add_attr_ui <- function(id) {
       ),
       mod_downfiles_ui(id = ns("down_sf"), style = "material-flat", label = "Shapefile"),
       tags$div(style = "margin-left: 10px"),
-      mod_downfiles_ui(id = ns("down_xlsx"), style = "material-flat", label = "Excel")
+      mod_downfiles_ui(id = ns("down_xlsx"), style = "material-flat", label = "Excel"),
     )
   )
 }
@@ -55,7 +55,7 @@ mod_add_attr_ui <- function(id) {
 #' add_attr Server Functions
 #'
 #' @noRd
-mod_add_attr_server <- function(id){
+mod_add_attr_server <- function(id, PAS){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
@@ -69,7 +69,7 @@ mod_add_attr_server <- function(id){
           tags$div(
             fileInput(
               inputId = ns("dem_help"),
-              label = "Ingresar DEM de Alos Palsar (12,5 x 12,5m)",
+              label = "Ingresar DEM",
               multiple = F,
               accept = c(".tif",".jp2"),
               buttonLabel = "Seleccionar",
@@ -113,20 +113,19 @@ mod_add_attr_server <- function(id){
 
     shinyjs::disable("add_attr")
     observe({
-      if(isTruthy(shp())) {
-        if ((input$add_pend_info & isTruthy(input$dem_help$datapath)) ||
-            (input$add_hidro_info & isTruthy(hidro()))) {
-          shinyjs::enable("add_attr")
-        }
+      if ((input$add_pend_info & isTruthy(input$dem_help$datapath) & isTruthy(shp())) ||
+          (input$add_hidro_info & isTruthy(hidro()) & isTruthy(shp()))) {
+        shinyjs::enable("add_attr")
       }
     })
 
     shp_2 <- eventReactive(input$add_attr,{
+      req(shp())
       shp() %>%
         {if (input$add_pend_info) {
           .[] %>%
             dplyr::mutate(Pend_media = get_slope(dem = input$dem_help$datapath, x = shp())) %>%
-            {if(input$PAS == 148){
+            {if(PAS == 148){
               .[] %>%
                 dplyr::mutate(
                   Ran_Pend = dplyr::case_when(
@@ -164,7 +163,8 @@ mod_add_attr_server <- function(id){
                 select(!!!dplyr::syms(input$campos)) %>%
                 sf::st_drop_geometry()
             )
-        } else .}
+        } else .} %>%
+        dplyr::relocate(geometry, .after = dplyr::last_col())
     })
 
     observeEvent(input$add_attr,{
@@ -184,9 +184,10 @@ mod_add_attr_server <- function(id){
       gc(reset = T)
       shinybusy::remove_modal_spinner()
     })
-
-    mod_downfiles_server(id = "down_sf", x = shp_2(), name_save = shp_name())
-    mod_downfiles_server(id = "down_xlsx", x = sf::st_drop_geometry(shp_2()), name_save = shp_name())
+    observeEvent(shp_2(),{
+      mod_downfiles_server(id = "down_sf", x = shp_2(), name_save = shp_name())
+      mod_downfiles_server(id = "down_xlsx", x = sf::st_drop_geometry(shp_2()), name_save = shp_name())
+    })
   })
 }
 

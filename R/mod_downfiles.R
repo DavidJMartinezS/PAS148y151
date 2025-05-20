@@ -65,25 +65,27 @@ mod_downfiles_server <- function(id, x, name_save){
       },
       content = function(file) {
         temp_dir <- tempdir()
+        wd <- getwd()
         setwd(temp_dir)
-        file.remove(list.files(temp_dir))
-        purrr::pwalk(
+        file.remove(list.files(pattern = "\\."))
+        pwalk(
           if(length(filetype()) == 1) list(list(x), list(filetype()), list(name_save)) else list(x, filetype(), name_save),
           .f = function(x, y, z) {
             switch(
               y,
-              sf = sf::write_sf(x, paste0(tools::file_path_sans_ext(z), ".shp")),
-              wb = openxlsx2::wb_save(x, paste0(tools::file_path_sans_ext(z), ".xlsx"), overwrite = T),
-              xlsx = openxlsx2::write_xlsx(x, paste0(tools::file_path_sans_ext(z), ".xlsx"))
+              sf = sf::write_sf(x, paste0(file_path_sans_ext(z), ".shp")),
+              wb = openxlsx2::wb_save(x, paste0(file_path_sans_ext(z), ".xlsx"), overwrite = T),
+              xlsx = writexl::write_xlsx(x, paste0(file_path_sans_ext(z), ".xlsx"))
             )
           }
         )
-        list_files <- unlist(map(name_save, function(x){list.files(temp_dir, pattern = x)}))
-        if(tools::file_ext(file) == "zip") {
-          zip::zip(zipfile = file, files = list_files)
+        list_files <- unlist(map(name_save, function(x){list.files(pattern = x)}))
+        if(file_ext(file) == "zip") {
+          zip(zipfile = file, files = list_files)
         } else {
           file.copy(from = list_files, to = file, overwrite = T)
         }
+        setwd(wd)
       }
     )
   })

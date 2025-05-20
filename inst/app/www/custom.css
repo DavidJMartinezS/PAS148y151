@@ -27,39 +27,48 @@
   color: var(--color-letranosel) !important;
   border-color: var(--color-bordersisel);
 }
-#head_style .btn-primary:active:hover, .btn-primary:active:focus, .btn-primary:active.focus, .btn-primary.active:hover, .btn-primary.active:focus, .btn-primary.active.focus, .open>.btn-primary.dropdown-toggle:hover, .open>.btn-primary.dropdown-toggle:focus, .open>.btn-primary.dropdown-toggle.focus {
+#head_style .btn-primary:active:hover,
+.btn-primary:active:focus,
+.btn-primary:active.focus,
+.btn-primary.active:hover,
+.btn-primary.active:focus,
+.btn-primary.active.focus,
+.open>.btn-primary.dropdown-toggle:hover,
+.open>.btn-primary.dropdown-toggle:focus,
+.open>.btn-primary.dropdown-toggle.focus {
   background-color: var(--color-sisel) !important;
   color: var(--color-letrasel) !important;
   border-color: var(--color-bordersisel) !important;
 }
 
-.bootstrap-select > .btn-primary{
+.bootstrap-select > .btn-primary {
   background-color: var(--color-nosel) !important;
   color: var(--color-letranosel) !important;
   border-color: var(--color-bordersisel) !important;
 }
-.btn-primary:active, .btn-primary.active, .open>.btn-primary.dropdown-toggle{
+.btn-primary:active, .btn-primary.active, .open>.btn-primary.dropdown-toggle {
   background-color: var(--color-sisel) !important;
   color: var(--color-letrasel) !important;
   border-color: var(--color-bordersisel) !important;
 }
-.dropdown-menu>.active>a, .dropdown-menu>.active>a:hover, .dropdown-menu>.active>a:focus{
+.dropdown-menu>.active>a, .dropdown-menu>.active>a:hover, .dropdown-menu>.active>a:focus {
   background-color: var(--color-sisel) !important;
 }
 
-.fas .fa-circle-info a:hover, a:active, a:focus{
-  color: #E8D79C;
+.sidebar-menu .fa-circle-info {
+  color: #C2C7D0;
+}
+.fa-circle-info {
+  color: cadetblue;
 }
 
 .carousel-control .glyphicon-chevron-left, .carousel-control .icon-prev,
 .carousel-control .glyphicon-chevron-right, .carousel-control .icon-next{
   color: darkseagreen;
 }
-
 .carousel-indicators {
   bottom: -50px !important;
 }
-
 a.carousel-control.left:focus {
   outline: transparent 0px;
   background-image: linear-gradient(to left, transparent 0px, rgba(0,0,0,0.1) 100%);
@@ -71,11 +80,9 @@ a.carousel-control.right:focus {
   box-shadow: 0px 0px 0px 1px transparent;
 }
 
-
 #accordion .panel-title{
   font-size: 1.5em;
 }
-/* Estilos para el encabezado de cada append */
 #accordion .panel-collapse .panel-body{
   font-size: 1.2em;
 }
@@ -95,19 +102,19 @@ a.carousel-control.right:focus {
   height: 120px;
 }
 
-.progress-bar{
-  background-color:#69A897;
+.progress-bar {
+  background-color:#69A897 !important;
 }
 
 #flex {
   display:flex;
 }
-#inline label{
+#inline label {
   display: table-cell;
   text-align: center;
   vertical-align: middle;
 }
-#inline .form-group{
+#inline .form-group {
   display: table-row;
 }
 

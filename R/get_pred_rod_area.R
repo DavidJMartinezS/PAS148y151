@@ -27,7 +27,7 @@
 #' @import dataPAS
 #' @importFrom dplyr filter select sym syms mutate mutate_at group_by summarise summarise_at ungroup case_when cur_group_id arrange vars pull rename count
 #' @importFrom janitor round_half_up
-#' @importFrom sf read_sf st_transform st_crs st_intersection st_union st_combine st_collection_extract st_make_valid st_cast st_area st_filter st_join
+#' @importFrom sf read_sf st_transform st_crs st_intersection st_union st_combine st_collection_extract st_make_valid st_cast st_area st_filter st_join st_relate
 #' @importFrom stringi stri_cmp_equiv stri_detect_regex stri_replace_all_regex stri_trim stri_length
 #' @importFrom tibble rowid_to_column
 #' @importFrom tidyr replace_na
@@ -42,7 +42,7 @@ get_pred_rod_area <- function(
     group_by_LB = NULL,
     sep_by_soil = T,
     group_by_dist = F,
-    distance_max = if(group_by_distance == F) NULL,
+    distance_max = if(group_by_dist == F) NULL,
     cut_by_prov = F,
     provincia = NULL,
     n_rodal_ord = F,
@@ -70,8 +70,12 @@ get_pred_rod_area <- function(
     provincia_sf <- sf::read_sf(system.file("Comunas.gdb", package = "dataPAS")) %>%
       dplyr::filter(PROVINCIA == provincia) %>%
       sf::st_transform(sf::st_crs(predios))
-    obras <- obras %>% sf::st_intersection(sf::st_union(sf::st_combine(provincia_sf))) %>% sf::st_collection_extract("POLYGON")
-    suelos <- suelos %>% sf::st_intersection(sf::st_union(sf::st_combine(provincia_sf))) %>% sf::st_collection_extract("POLYGON")
+    obras <- obras %>%
+      sf::st_intersection(sf::st_union(sf::st_combine(provincia_sf))) %>%
+      sf::st_collection_extract("POLYGON")
+    suelos <- suelos %>%
+      sf::st_intersection(sf::st_union(sf::st_combine(provincia_sf))) %>%
+      sf::st_collection_extract("POLYGON")
     LB <- LB[provincia_sf, ]
     predios <- predios[provincia_sf, ]
   } %>% suppressWarnings()
@@ -107,7 +111,7 @@ get_pred_rod_area <- function(
     sf::st_cast("POLYGON") %>%
     sf::st_make_valid() %>%
     sf::st_collection_extract("POLYGON") %>%
-    dplyr::filter(!sf::st_area(geometry) %>% units::drop_units() %>% janitor::round_half_up() == 0) %>%
+    dplyr::filter(sf::st_area(geometry) %>% units::drop_units() %>% janitor::round_half_up() != 0) %>%
     suppressWarnings()
 
   Rodales <- LB %>%
@@ -128,7 +132,7 @@ get_pred_rod_area <- function(
             stringi::stri_cmp_equiv("formacion xerofitica", strength = 1)
         )
     }} %>%
-    sf::st_filter(areas, .predicate = st_relate, pattern = "T********") %>%
+    sf::st_filter(areas, .predicate = sf::st_relate, pattern = "T********") %>%
     {if (is.null(group_by_LB) & !("PID" %in% names(.))) tibble::rowid_to_column(., "PID") else .} %>%
     {if (n_rodal_ord) dplyr::mutate(., N_Rodal = st_order(geometry, order = orden_rodal)) else .} %>%
     my_union(predios %>% dplyr::select(N_Predio, Nom_Predio)) %>%

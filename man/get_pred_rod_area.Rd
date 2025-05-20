@@ -13,7 +13,7 @@ get_pred_rod_area(
   group_by_LB = NULL,
   sep_by_soil = T,
   group_by_dist = F,
-  distance_max = if (group_by_distance == F) NULL,
+  distance_max = if (group_by_dist == F) NULL,
   cut_by_prov = F,
   provincia = NULL,
   n_rodal_ord = F,

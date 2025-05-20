@@ -85,7 +85,7 @@ check_carto <- function(x, id, shiny = F){
         text = paste0(
           "Shapefile sin los campos requeridos", tags$br(), tags$br(),
           tags$b("Requeridos: "), paste0(names_req %>% shQuote(), collapse = ", "), tags$br(), tags$br(),
-          tags$b("Faltan: "), paste0(setdiff(names_act, names_req) %>% shQuote(), collapse = ", ")
+          tags$b("Faltan: "), paste0(setdiff(names_req, names_act) %>% shQuote(), collapse = ", ")
         )
       )
     } else {

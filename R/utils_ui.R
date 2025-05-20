@@ -153,10 +153,10 @@ add_help_text <- function(x, ...){
 #' @noRd
 mytheme <- fresh::create_theme(
   fresh::adminlte_color(
-    # green = "#69A897"
+    green = "#69A897"
     # green = "#B3C0A4"
     # green = "#a5c3a7"
-    green = "#6FB58F"
+    # green = "#6FB58F"
   ),
   fresh::adminlte_sidebar(
     # width = "400px",

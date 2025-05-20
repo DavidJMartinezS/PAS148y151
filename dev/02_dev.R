@@ -68,7 +68,13 @@ usethis::use_package('tibble')
 usethis::use_package('tidyr')
 usethis::use_package('tools')
 usethis::use_package('units')
+usethis::use_package('writexl')
 usethis::use_package('zip')
+
+archivo <- "~/R/PAS148y151/R/utils_ui.R"
+contenido <- readLines(archivo, encoding = "UTF-8")
+contenido_escapado <- sapply(contenido, function(line) paste0(escape_non_ascii(line), collapse = ""))
+writeLines(contenido_escapado, "~/R/NOT-ASCII/utils_ui.R", useBytes = TRUE)
 
 ## Add helper functions ----
 ## Creates fct_* and utils_*
