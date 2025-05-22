@@ -407,18 +407,45 @@ app_server <- function(input, output, session) {
     })
   })
 
-  ### Curvas de nivel
+  ### Curvas de nivel ----
   observeEvent(input$add_CN,{
     output$add_CN_ui <- renderUI({
       if (input$add_CN) {
-        shinyWidgets::numericInputIcon(
-          inputId = "step",
-          label = "Intérvalo",
-          value = 10,
-          min = 10,
-          max = 500,
-          step = 10,
-          icon = icon("ruler-horizontal")
+        tags$div(
+          id = "flex",
+          tags$div(
+            id = "inline",
+            shinyWidgets::pickerInput(
+              inputId = "cut_cn",
+              label = "Corte",
+              choices = c("clip", "buffer", "crop", "crop_by_row"),
+              selected = "clip"
+            ),
+            style = "margin-left: 25px;"
+          ),
+          tags$div(
+            id = "inline",
+            numericInput(
+              inputId = "buffer_cn",
+              label = "Buffer",
+              value = 0,
+              step = 10,
+              width = "100px"
+            ),
+            style = "margin-left: 25px;"
+          ),
+          tags$div(
+            id = "inline",
+            shinyWidgets::numericInputIcon(
+              inputId = "step",
+              label = "Intérvalo: ",
+              value = 10,
+              min = 10,
+              max = 500,
+              step = 10,
+              icon = icon("ruler-horizontal")
+            )
+          )
         )
       }
     })
@@ -426,7 +453,7 @@ app_server <- function(input, output, session) {
 
   ### BD Flora ----
   # bd_flora <- mod_bd_flora_server("bd_flora", rodales_def = rodales_def())
-  bd_flora <- reactive({
+  bd_flora <- eventReactive(input$bd_flora, {
     req(c(input$bd_flora$datapath, rodales_def()))
 
     read_xlsx(input$bd_flora$datapath) %>%
@@ -469,9 +496,9 @@ app_server <- function(input, output, session) {
             !N_ind %in% c(NA, 0)
           )
       }} %>%
-      dplyr::select(-dplyr::matches("Nom_Predio|N_Rodal|Tipo_veg|Tipo_For|Subtipo_fo")) %>%
+      dplyr::select(-dplyr::matches("Nom_Predio|N_Rodal|Tipo_veg|Tipo_fores|Tipo_For|Subtipo_fo")) %>%
       sf::st_as_sf(coords = c("UTM_E","UTM_N"), crs = sf::st_crs(rodales_def()), remove = F) %>%
-      sf::st_join(rodales_def() %>% dplyr::select(Nom_Predio, N_Rodal, Tipo_For, Subtipo_fo, Tipo_veg)) %>%
+      sf::st_join(rodales_def() %>% dplyr::select(Nom_Predio, N_Rodal, Tipo_fores, Tipo_For, Subtipo_fo, Tipo_veg)) %>%
       dplyr::mutate_at("N_Rodal", as.integer) %>%
       sf::st_drop_geometry() %>%
       dplyr::mutate_at("N_ind", as.integer) %>%
@@ -506,22 +533,28 @@ app_server <- function(input, output, session) {
     if (df_ecc() %>% nrow() >= 1) {
       shinybusy::report_warning(
         title = "ECC arbórea en las parcelas",
-        text = paste0(
+        text = tags$p(paste0(
           "Ojo con las siguientes especies y parcelas:\n",
           df_ecc() %>%
             dplyr::group_by(Especie, RCE) %>%
             dplyr::mutate_at("RCE", ~ paste0("(RCE: ", .x, ")")) %>%
-            {if(nrow(.) > 10) {
-              dplyr::sample_n(., 10) %>%
-                dplyr::summarise(Parcelas = paste0(Parcela, collapse = ", ")) %>%
-                dplyr::mutate(Parcelas = purrr::map_chr(Parcelas, ~paste0("(", .x, ", etc...)")))
-            } else {
-              dplyr::summarise(., Parcelas = paste0(Parcela, collapse = ", ")) %>%
-                dplyr::mutate(Parcelas = purrr::map_chr(Parcelas, ~paste0("(", .x, ")")))
-            }} %>%
-            tidyr::unite("SP", 1:3, remove = T, sep = " ") %>%
-            dplyr::pull(SP) %>% paste0(collapse = "\n")
-        )
+            split(.$Especie) %>%
+            purrr::map(function(x){
+              x %>%
+                {if(nrow(.) > 10) {
+                  dplyr::sample_n(., 10) %>%
+                    dplyr::summarise(Parcelas = paste0(Parcela, collapse = ", ")) %>%
+                    dplyr::mutate(Parcelas = purrr::map_chr(Parcelas, ~paste0("(", .x, ", etc...)")))
+                } else {
+                  dplyr::summarise(., Parcelas = paste0(Parcela, collapse = ", ")) %>%
+                    dplyr::mutate(Parcelas = purrr::map_chr(Parcelas, ~paste0("(", .x, ")")))
+                }} %>%
+                tidyr::unite("SP", 1:3, remove = T, sep = " ")
+            }) %>%
+            dplyr::bind_rows() %>%
+            dplyr::pull(SP) %>%
+            paste0(collapse = "\n")
+        ))
       )
     }
   })
@@ -623,14 +656,14 @@ app_server <- function(input, output, session) {
       catastro = catastro(),
       suelos = suelos_uso_act(),
       add_caminos = input$add_cam,
-      add_caminos_osm = input$add_cam_osm,
+      add_caminos_osm = if(input$add_cam == F) F else input$add_cam_osm,
       caminos_arg = if(input$add_cam == F) list(cut = "clip", buffer = 0) else list(cut = input$cut_cam, buffer = input$buffer_cam),
       add_hidro = input$add_hidro,
       fuente_hidro = input$fuente_hidro,
       add_hidro_osm = if(input$add_hidro == F) F else input$add_hidro_osm,
       hidro_arg = if(input$add_hidro == F) list(cut = "clip", buffer = 0) else list(cut = input$cut_hidro, buffer = input$buffer_hidro),
       add_curv_niv = input$add_CN,
-      curv_niv_arg = if(input$add_CN == F) list(cut = "clip", buffer = 0) else list(cut = input$cut_curv_niv, buffer = input$buffer_curv_niv),
+      curv_niv_arg = if(input$add_CN == F) list(cut = "clip", buffer = 0) else list(cut = input$cut_cn, buffer = input$buffer_cn),
       step = if(input$add_CN == F) 10 else input$step,
       dec_sup = input$n_dec
     )
@@ -674,7 +707,7 @@ app_server <- function(input, output, session) {
         "Hidrografia_osm",
         "Curvas_niv"
       ) %>%
-        str_c(.,input$NOMPREDIO, sep = "_") %>%
+        paste0(.,input$NOMPREDIO, sep = "_") %>%
         subset(
           c(rep(T, 7),
             input$add_parcelas,
@@ -745,7 +778,7 @@ app_server <- function(input, output, session) {
 
   shinyjs::disable("get_apendices_2y3_btn")
   observe({
-    req(c(bd_flora(), rodales_def(), predios_def()))
+    req(c(rodales_def(), predios_def(), bd_flora()))
     shinyjs::enable("get_apendices_2y3_btn")
   })
 
@@ -819,10 +852,10 @@ app_server <- function(input, output, session) {
   shinyjs::disable("get_apendice_5_btn")
   observe({
     req(c(
-      bd_flora(),
       rodales_def(),
       carto_digital()$tabla_predios,
       carto_digital()$tabla_areas,
+      bd_flora(),
       tabla_attr_rodal()
     ))
     shinyjs::enable("get_apendice_5_btn")

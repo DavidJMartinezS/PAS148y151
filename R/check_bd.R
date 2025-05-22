@@ -126,7 +126,7 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
             text = tags$p(
               "Las siguientes parcelas presentan mas de una coordenada teniendo la misma campaña y cuadrilla:",
               rep_br(2),
-              str_c(
+              paste(
                 x %>%
                   dplyr::count(Campana, Cuadrilla, Parcela, UTM_E, UTM_N) %>%
                   dplyr::count(Campana, Cuadrilla, Parcela, sort = T) %>%
@@ -168,7 +168,7 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
             text = tags$p(
               "Las siguientes parcelas presentan mas de una cuadrilla teniendo la misma campaña y coordenada:",
               rep_br(2),
-              str_c(
+              paste(
                 x %>%
                   dplyr::count(Campana, Cuadrilla, Parcela, UTM_E, UTM_N) %>%
                   dplyr::count(Campana, Parcela, UTM_E, UTM_N, sort = T) %>%
@@ -183,7 +183,7 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
           cat(
             "\033[31mProblemas!","\U0001FAE0", "Mismas parcela, diferentes cuadrillas!", "\n",
             "\033[34mLas siguientes parcelas presentan mas de una cuadrilla teniendo la misma campaña y coordenada:", "\n",
-            str_c(
+            paste(
               x %>%
                 dplyr::count(Campana, Cuadrilla, Parcela, UTM_E, UTM_N) %>%
                 dplyr::count(Campana, Parcela, UTM_E, UTM_N, sort = T) %>%
@@ -210,7 +210,7 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
             text = tags$p(
               "Las siguientes parcelas se repiten en más de una campaña:",
               rep_br(2),
-              str_c(
+              paste(
                 x %>%
                   dplyr::count(Campana, Cuadrilla, Parcela, UTM_E, UTM_N) %>%
                   dplyr::count(Cuadrilla, Parcela, UTM_E, UTM_N, sort = T) %>%

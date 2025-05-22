@@ -46,7 +46,6 @@ mod_add_attr_ui <- function(id) {
         color = "success"
       ),
       mod_downfiles_ui(id = ns("down_sf"), style = "material-flat", label = "Shapefile"),
-      tags$div(style = "margin-left: 10px"),
       mod_downfiles_ui(id = ns("down_xlsx"), style = "material-flat", label = "Excel"),
     )
   )

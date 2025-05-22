@@ -33,16 +33,23 @@ group_by_distance <- function(x, distance){
 #' @rdname spatial_functions
 #' @export
 my_union <- function(x, y) {
-  stopifnot("El objeto ingresado no es un objeto de la clase 'sf'." = inherits(x, "sf"))
-  stopifnot("El objeto ingresado no es un objeto de la clase 'sf'." = inherits(y, "sf"))
+  stopifnot("El objeto ingresado no es un objeto de la clase 'sf'." = inherits(x, "sf") || inherits(x, "sfc"))
+  stopifnot("El objeto ingresado no es un objeto de la clase 'sf'." = inherits(y, "sf") || inherits(x, "sfc"))
   sf::st_agr(x) = "constant"
   sf::st_agr(y) = "constant"
+  geom_type <- if(any(sf::st_is(x, "POLYGON") | sf::st_is(x, "MULTIPOLYGON"))) {
+    "POLYGON"
+  } else if(any(sf::st_is(x, "LINESTRING") | sf::st_is(x, "MULTILINESTRING"))) {
+    "LINESTRING"
+  } else if(any(sf::st_is(x, "POINT") | sf::st_is(x, "MULTILIPOINT"))) {
+    "POINT"
+  }
   x %>%
     sf::st_difference(sf::st_union(sf::st_combine(y))) %>%
-    st_collection_extract("POLYGON") %>%
+    st_collection_extract(geom_type) %>%
     dplyr::bind_rows(
       sf::st_intersection(x, y) %>%
-        st_collection_extract("POLYGON")
+        st_collection_extract(geom_type)
     )
 }
 

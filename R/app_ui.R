@@ -352,6 +352,7 @@ app_ui <- function(request) {
                     style = "margin-bottom: 10px"
                   ),
                   tags$h4("Apéndices 2 y 3 (Densidad de especies y ubicación de parcela)", style = "font-weight: bold;"),
+                  tags$div(style = "margin-top: 10px"),
                   shinyWidgets::materialSwitch(
                     inputId = "add_bd_pcob",
                     label = "¿Desea incluir parcelas de cobertura?",
@@ -373,7 +374,7 @@ app_ui <- function(request) {
                   ),
                   tags$br(),
                   tags$h4("Apéndice 5 - Tablas formulario CONAF", style = "font-weight: bold;"),
-                  div(style = "margin-top: 10px"),
+                  div(style = "margin-top: 15px"),
                   tags$div(
                     style = "margin-left: -15px",
                     mod_downfiles_ui(
@@ -393,10 +394,10 @@ app_ui <- function(request) {
                     placeholder = "Archivo no seleccionado"
                   ) %>%
                     add_help_text(title = "Cargar con los mismos atributos de como se descargó"),
-                  tags$div(style = "margin-top: -5px"),
+                  tags$div(style = "margin-top: -10px"),
                   mod_leer_sf_ui("obras_ap5", "Ingresar obras (opcional)") %>%
                     add_help_text(title = "Campos minimos requeridos:\n'Tipo', 'Obra'"),
-                  tags$div(style = "margin-top: -5px"),
+                  tags$div(style = "margin-top: -10px"),
                   uiOutput("bd_fauna_ui"),
                   tags$div(style = "margin-top: -10px"),
                   tags$div(

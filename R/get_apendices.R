@@ -128,7 +128,7 @@ apendice_2_3 <- function(
           Cob_BB == "r" ~ "1",
           Cob_BB == "+" ~ "3",
           Cob_BB == "1" ~ "<5",
-          Cob_BB == "2" ~ "7.5",
+          Cob_BB == "2" ~ "7,5",
           Cob_BB == "3" ~ "10-25",
           Cob_BB == "4" ~ "25-50",
           Cob_BB == "5" ~ "50-75",
@@ -148,8 +148,8 @@ apendice_2_3 <- function(
     }}
 
   flextable::set_flextable_defaults(
-    decimal.mark = ".",
-    big.mark = ","
+    decimal.mark = ",",
+    big.mark = "."
   )
 
   if (PAS == 148) {
@@ -169,29 +169,32 @@ apendice_2_3 <- function(
           {if(!is.null(df_cob)){
             c("P.COB_NHA\n(árb/ha)",
               "P.COB_Cobertura por especie (%)",
-              "P.COB_Cobertura por parcela (%)")
+              "P.COB_Cobertura por parcela (%)",
+              "FLORA_NHA\n(árb/ha)",
+              "FLORA_Cobertura por especie (%)",
+              "FLORA_Cobertura por parcela (%)")
           }},
-          "FLORA_NHA\n(árb/ha)",
-          "FLORA_Cobertura por especie (%)",
-          "FLORA_Cobertura por parcela (%)"
+          "NHA\n(árb/ha)",
+          "Cobertura por especie (%)",
+          "Cobertura por parcela (%)"
         )
       ) %>%
       flextable::flextable() %>%
-      flextable::separate_header(split = "_", ) %>%
-      flextable::delete_columns(1) %>%
+      flextable::separate_header(split = "_") %>%
       flextable::merge_v(j = c(1:3, 7, 10)) %>%
       flextable::italic(j = 4) %>%
       flextable::autofit() %>%
       flextable::theme_box() %>%
-      flextable::bg(i = ~ `FLORA_Cobertura por parcela (%)` < 10, j = 7, bg = "yellow") %>%
       {if(!is.null(df_cob)) {
-        flextable::bg(i = ~ `P.COB_Cobertura por parcela (%)` < 10, j = 10, bg = "yellow")
-      } else .} %>%
+        flextable::bg(.,i = ~ `P.COB_Cobertura por parcela (%)` < 10, j = 7, bg = "yellow") %>%
+        flextable::bg(i = ~ `FLORA_Cobertura por parcela (%)` < 10, j = 10, bg = "yellow")
+      } else {
+        flextable::bg(.,i = ~ `Cobertura por parcela (%)` < 10, j = 7, bg = "yellow")
+      }} %>%
       flextable::valign(part = "header", valign = "center") %>%
       flextable::align(part = "header", align = "center") %>%
       flextable::bg(bg = "#bcc5d4", part = "header")
-  }
-  if (PAS == 151) {
+  } else {
     ft_2 <- df_flora %>%
       dplyr::arrange(N_Parc, Especie) %>%
       `names<-`(

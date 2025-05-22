@@ -37,8 +37,8 @@
 #' @import dataPAS
 #' @importFrom dplyr mutate_if mutate_at mutate select syms case_when filter arrange group_by cur_group_id ungroup count vars rename starts_with tally bind_rows rename_at contains
 #' @importFrom janitor round_half_up
-#' @importFrom sf st_area st_drop_geometry st_as_sf st_join st_crs st_intersection st_collection_extract st_make_valid read_sf st_as_text st_transform st_buffer st_bbox st_as_sfc st_geometry st_union st_crop st_zm st_nearest_feature st_equals
-#' @importFrom stringi stri_detect_regex stri_extract_all_regex stri_trans_general stri_trans_tolower
+#' @importFrom sf st_area st_drop_geometry st_as_sf st_join st_crs st_intersection st_collection_extract st_make_valid read_sf st_as_text st_transform st_buffer st_bbox st_as_sfc st_geometry st_union st_crop st_zm st_nearest_feature st_equals st_set_geometry
+#' @importFrom stringi stri_detect_regex stri_extract_all_regex stri_trans_general stri_trans_tolower stri_extract
 #' @importFrom terra crs `crs<-` rast crop minmax as.contour
 #' @importFrom units set_units drop_units
 #' @importFrom purrr map_dfr map2_dbl map_dbl
@@ -258,8 +258,9 @@ cart_parcelas <- function(PAS, bd_flora, rodales){
         !N_ind %in% c(NA, 0)
       )
     }} %>%
+    dplyr::select(-dplyr::matches("Nom_Predio|N_Rodal|Tipo_veg|Tipo_fores|Tipo_For|Subtipo_fo")) %>%
     sf::st_as_sf(coords = c("UTM_E","UTM_N"), crs = sf::st_crs(rodales), remove = F) %>%
-    sf::st_join(rodales %>% dplyr::select(Nom_Predio, N_Rodal)) %>%
+    sf::st_join(rodales %>% dplyr::select(Nom_Predio, N_Rodal, Tipo_fores, Tipo_For, Subtipo_fo, Tipo_veg)) %>%
     dplyr::mutate_at("N_Rodal", as.integer) %>%
     sf::st_drop_geometry() %>%
     dplyr::mutate_at("N_ind", as.integer) %>%
@@ -335,7 +336,7 @@ cart_hidro <- function(predios, fuente_hidro, cut = "clip", buffer = 0){
     warning("No buffer has been applied. cut is 'clip'. To apply the buffer you can select 'buffer', 'crop' or 'crop_by_row' in cut parameter")
   }
 
-  dplyr::bind_rows(
+  asd <- dplyr::bind_rows(
     sf::read_sf(
       system.file("Red_hidrografica_XV_XIII.gdb", package = "dataPAS"),
       wkt_filter = sf::st_as_text(
@@ -359,6 +360,7 @@ cart_hidro <- function(predios, fuente_hidro, cut = "clip", buffer = 0){
       )
     )
   ) %>%
+    sf::st_set_geometry("geometry") %>%
     sf::st_transform(sf::st_crs(predios)) %>%
     {if(cut %in% c("clip", "buffer")){
       .[] %>% sf::st_intersection(predios %>% sf::st_buffer(buffer) %>% sf::st_union())
@@ -380,11 +382,11 @@ cart_hidro <- function(predios, fuente_hidro, cut = "clip", buffer = 0){
     }} %>%
     sf::st_collection_extract("LINESTRING") %>%
     {if(nrow(.) == 0){
-      NULL
+      .[]
     } else {
       .[] %>%
         dplyr::select(strahler_n, dplyr::contains(fuente_hidro)) %>%
-        dplyr::rename_at(dplyr::vars(dplyr::contains(fuente_hidro)), ~stringi::stri_extract_all_regex(., ".*(?=_)")) %>%
+        dplyr::rename_at(dplyr::vars(dplyr::contains(fuente_hidro)), ~stringi::stri_extract(., regex = ".*(?=_)", mode = "first")) %>%
         dplyr::rename(Etiqueta = nombre) %>%
         dplyr::mutate_at("tipo", stringi::stri_trans_general, "Latin-ASCII") %>%
         dplyr::mutate(
@@ -454,7 +456,7 @@ cart_hidro_osm <- function(predios, cut = "clip", buffer = 0){
     }} %>%
     sf::st_collection_extract("LINESTRING") %>%
     {if(nrow(.) == 0){
-      NULL
+      .[]
     } else {
       .[] %>%
         dplyr::mutate(
@@ -576,19 +578,21 @@ cart_caminos <- function(predios, cut = "clip", buffer = 0){
     }} %>%
     sf::st_collection_extract("LINESTRING") %>%
     {if(nrow(.) == 0){
-      NULL
+      .[]
     } else {
       .[] %>%
-        dplyr::mutate(Tipo_Cam = ifelse(
-          str_detect(CLASIFICACION, 'Internacional|Nacional|Regional Principal'),
-          1,
-          ifelse(
-            str_detect(CLASIFICACION, 'Regional Provincial|Regional Comunal'),
-            2,
-            ifelse(str_detect(CLASIFICACION, 'Acceso'), 3, 4)
-          )
-        ) %>% as.integer(),
-        Fuente = "Dirección de Vialidad, Ministerio de Obras Públicas") %>%
+        dplyr::mutate(
+          Tipo_Cam = ifelse(
+            stringi::stri_detect_regex(CLASIFICACION, 'Internacional|Nacional|Regional Principal'),
+            1,
+            ifelse(
+              stringi::stri_detect_regex(CLASIFICACION, 'Regional Provincial|Regional Comunal'),
+              2,
+              ifelse(stringi::stri_detect_regex(CLASIFICACION, 'Acceso'), 3, 4)
+            )
+          ) %>% as.integer(),
+          Fuente = "Dirección de Vialidad, Ministerio de Obras Públicas"
+        ) %>%
         my_union(predios %>% dplyr::select(Nom_Predio)) %>%
         sf::st_collection_extract("LINESTRING") %>%
         dplyr::mutate_at("Nom_Predio", tidyr::replace_na, "S/I") %>%
@@ -644,7 +648,7 @@ cart_caminos_osm <- function(predios, cut = "clip", buffer = 0){
     }} %>%
     sf::st_collection_extract("LINESTRING") %>%
     {if(nrow(.) == 0){
-      NULL
+      .[]
     } else {
       .[] %>%
         dplyr::mutate(
@@ -717,6 +721,7 @@ cart_curv_niv <- function(predios, dem, cut = "clip", buffer = 0, step = 10){
     my_union(predios %>% dplyr::select(Nom_Predio)) %>%
     sf::st_collection_extract("LINESTRING") %>%
     dplyr::mutate_at("Nom_Predio", tidyr::replace_na, "S/I") %>%
+    dplyr::rename(Cot_Curva = level) %>%
     dplyr::select(Nom_Predio, Cot_Curva, Fuente)
 }
 

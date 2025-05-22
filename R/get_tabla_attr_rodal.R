@@ -7,7 +7,7 @@
 #' @return Tabla con los atributos de rodal
 #' @export
 #'
-#' @importFrom dplyr syms group_by summarise rename arrange select bind_rows filter ungroup count left_join case_when if_else mutate
+#' @importFrom dplyr syms group_by summarise rename arrange select bind_rows filter ungroup count left_join case_when mutate
 #' @importFrom sf st_as_sf st_distance st_join st_nearest_feature st_drop_geometry st_as_sf st_collection_extract st_crs
 #' @importFrom tidyr complete unnest
 #' @importFrom janitor round_half_up
@@ -107,10 +107,10 @@ get_tabla_attr_rodal <- function(PAS, parcelas_rodales, rodales_def){
     ) %>%
     sf::st_drop_geometry() %>%
     dplyr::mutate(
-      Tipo_attr = dplyr::if_else(is.na(Parcelas), "Estimación", "Parcela directa"),
+      Tipo_attr = ifelse((is.na(Parcelas) | Parcelas == "NA"), "Estimación", "Parcela directa"),
       Nom_attr = dplyr::case_when(
-        !is.na(Parcelas) ~ paste0("Parcela ", Parcelas),
-        is.na(Parcelas) & !(Tipo_veg %in% unique(estimaciones_x_tipo$Tipo_veg)) ~ "Estimación por Tipo vegetacional similar",
+        Tipo_attr ==  "Parcela directa" ~ paste0("Parcela ", Parcelas),
+        Tipo_attr ==  "Estimación" & !(Tipo_veg %in% unique(estimaciones_x_tipo$Tipo_veg)) ~ "Estimación por Tipo vegetacional similar",
         .default = "Estimación por Tipo vegetacional"
       )
     ) %>%

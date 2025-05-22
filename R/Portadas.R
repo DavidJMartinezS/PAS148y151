@@ -14,8 +14,8 @@
 wb_portada_kimal <- function(wb, PAS, apendice, provincia) {
   stopifnot(inherits(wb, "wbWorkbook"))
   stopifnot(PAS %in% c(148, 151))
-  stopifnot(apendice %in% c(1, 2, 5))
-  stopifnot(provincia %>% unlist(provincias_list))
+  stopifnot(apendice %in% c(2, 3, 5))
+  stopifnot(provincia %in% unlist(provincias_list))
 
   mes <- Sys.Date() %>% format('%B') %>% stringi::stri_trans_totitle(opts_brkiter = stringi::stri_opts_brkiter(type = "sentence"))
   yr <- Sys.Date() %>% format('%Y') %>% stringi::stri_trans_totitle(opts_brkiter = stringi::stri_opts_brkiter(type = "sentence"))
@@ -52,7 +52,7 @@ wb_portada_kimal <- function(wb, PAS, apendice, provincia) {
     wb_add_font(dims = "B33", bold = T, size = 14) %>%
     wb_add_cell_style(dims = "B33", horizontal = "center", vertical = "center") %>%
     wb_merge_cells(dims = wb_dims(rows = 33, cols = 2:5), solve = T) %>%
-    wb_add_image(dims = "C35", file = "CONEXION.png", width = 6.5, height = 2, units = 'cm') %>%
+    wb_add_image(dims = "C35", file = app_sys("app/www/CONEXION.png"), width = 6.5, height = 2, units = 'cm') %>%
     # Fecha
     wb_add_data(x = paste0(mes,yr, sep = ", "),dims = "C43") %>%
     wb_add_cell_style(dims = "C43", horizontal = "center", vertical = "center") %>%
@@ -65,8 +65,8 @@ wb_portada_kimal <- function(wb, PAS, apendice, provincia) {
 wb_portada_default <- function(wb, PAS, apendice, nom_proj = NULL, provincia){
   stopifnot(inherits(wb, "wbWorkbook"))
   stopifnot(PAS %in% c(148, 151))
-  stopifnot(apendice %in% c(1, 2, 5))
-  stopifnot(provincia %>% unlist(provincias_list))
+  stopifnot(apendice %in% c(2, 3, 5))
+  stopifnot(provincia %in% unlist(provincias_list))
 
   mes <- Sys.Date() %>% format('%B') %>% stringi::stri_trans_totitle(opts_brkiter = stringi::stri_opts_brkiter(type = "sentence"))
   yr <- Sys.Date() %>% format('%Y') %>% stringi::stri_trans_totitle(opts_brkiter = stringi::stri_opts_brkiter(type = "sentence"))
@@ -75,7 +75,7 @@ wb_portada_default <- function(wb, PAS, apendice, nom_proj = NULL, provincia){
     nom_proj <- "INGRESE NOMBRE DEL PROYECTO"
   }
 
-  om_apendice <- switch(
+  nom_apendice <- switch(
     apendice,
     "2" = "APÉNDICE 2. Densiadad de especies",
     "3" = "APÉNDICE 3. Coordenadas ubicación de parcelas",
@@ -107,7 +107,7 @@ wb_portada_default <- function(wb, PAS, apendice, nom_proj = NULL, provincia){
     wb_add_font(dims = "B31", bold = T, size = 14) %>%
     wb_add_cell_style(dims = "B31", horizontal = "center", vertical = "center") %>%
     wb_merge_cells(dims = wb_dims(rows = 31, cols = 2:5), solve = T) %>%
-    wb_add_image(dims = "C33",file = "logo_default.png", width = 135.2899, height = 141.7323, units = 'px', dpi = 72) %>%
+    wb_add_image(dims = "C33", file = app_sys("app/www/logo_default.png"), width = 135.2899, height = 141.7323, units = 'px', dpi = 72) %>%
     # Fecha
     wb_add_data(x = paste0(mes,yr, sep = ", "),dims = "C43") %>%
     wb_add_cell_style(dims = "C43", horizontal = "center", vertical = "center") %>%
@@ -115,3 +115,4 @@ wb_portada_default <- function(wb, PAS, apendice, nom_proj = NULL, provincia){
     wb_set_col_widths(cols = 1:6, widths = 13)
   return(wb)
 }
+

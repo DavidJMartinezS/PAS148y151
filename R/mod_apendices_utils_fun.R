@@ -67,6 +67,9 @@ plot_coverage <- function(x, plot_size = 500, percent = F, digits = 1, ...){
 #' "Plantación de especies nativas de Acacia caven-Quillaja saponaria"))
 italic_sp <- function(x){
   split_de <- function(texto, patron){
+    if (is.na(texto)) {
+      return(texto)
+    }
     posiciones <- gregexpr(patron, texto)[[1]]
     if (length(posiciones) > 0 && posiciones[1] != -1) {
       ultima_posicion <- tail(posiciones, n = 1)
