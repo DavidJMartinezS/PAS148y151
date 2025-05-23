@@ -3,7 +3,8 @@ Title: Dashboard para elaborar PAS 148 y 151
 Version: 0.0.0.9000
 Authors@R: 
     person("David", "Martínez Sánchez", , "david.tinez1@gmail.com", role = c("aut", "cre"))
-Description: Paquete realizado para elaborar cartografía y apéndices de Permisos Ambientales Sectoriales (PAS) 148 y 151.
+Description: Paquete realizado para elaborar cartografía y apéndices de
+    Permisos Ambientales Sectoriales (PAS) 148 y 151.
 License: GPL (>= 3)
 Imports: 
     bsplus,
@@ -31,6 +32,7 @@ Imports:
     shinyEffects,
     shinyjs,
     shinyWidgets,
+    stats,
     stringi,
     terra,
     tibble,

@@ -268,6 +268,7 @@ app_server <- function(input, output, session) {
   areas_def <- mod_leer_sf_server(id = "cart_area", crs = crs(), fx = function(x){
     x %>%
       dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("textcaus|clase_uso", case_insensitive = T), ~ "Clase_Uso") %>%
+      dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("desceros|cat_erosio|clase_eros", case_insensitive = T), ~ "Clase_Eros") %>%
       dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("n_area", case_insensitive = T), ~ "N_Area") %>%
       dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("nom_predio", case_insensitive = T), ~ "Nom_Predio") %>%
       dplyr::mutate(Tipo_Bos = "BN")
@@ -275,7 +276,7 @@ app_server <- function(input, output, session) {
   observeEvent(areas_def(),{
     check_input(
       x = areas_def(),
-      names_req = c('Nom_Predio', 'N_Area', 'Clase_Uso'),
+      names_req = if(input$PAS == 148) c('Nom_Predio', 'N_Area', 'Clase_Uso') else c('Nom_Predio', 'N_Area', 'Clase_Eros'),
       huso = input$huso,
       id = "cart_area-sf_file"
     )
@@ -290,6 +291,70 @@ app_server <- function(input, output, session) {
       huso = input$huso,
       id = "cart_rodales-sf_file"
     )
+  })
+
+  observeEvent(c(areas_def(),rodales_def()),{
+    req(c(areas_def(), rodales_def()))
+    if (
+      any(
+        rodales_def() %>%
+        dplyr::group_by(N_Rodal) %>%
+        dplyr::summarise_at("Sup_ha", sum) %>%
+        .$Sup_ha < 0.5
+      ) &
+      input$PAS == 148
+    ) {
+      shinybusy::report_warning(
+        title = "OJO!. Rodales de bosque menores a 0,5 ha",
+        text = paste0(
+          "Los siguientes rodales de BN presentan una superficie inferior a 0,5 ha:\n",
+          rodales_def() %>%
+            dplyr::group_by(N_Rodal) %>%
+            dplyr::summarise_at("Sup_ha", sum) %>%
+            dplyr::filter(Sup_ha < 0.5) %>%
+            .$N_Rodal %>%
+            shQuote() %>%
+            paste0(collapse = ", ")
+        )
+      )
+    }
+    if (
+      any(
+        rodales_def() %>%
+        dplyr::group_by(N_Rodal) %>%
+        dplyr::summarise_at("Sup_ha", sum) %>%
+        .$N_Rodal < 1) &
+      input$PAS == 151
+    ) {
+      shinybusy::report_warning(
+        title = "OJO!. Rodales de FX menores a 1 ha",
+        text = paste0(
+          "Los siguientes rodales presentan una superficie inferior a 1 ha:\n",
+          rodales_def() %>%
+            dplyr::group_by(N_Rodal) %>%
+            dplyr::summarise_at("Sup_ha", sum) %>%
+            dplyr::filter(Sup_ha < 1) %>%
+            .$N_Rodal %>%
+            shQuote() %>%
+            paste0(collapse = ", ")
+        )
+      )
+    }
+    if (nrow(rodales_def() %>% dplyr::count(N_Rodal)) >
+        nrow(rodales_def() %>% dplyr::count(N_Rodal) %>% .[areas_def(), ])) {
+      shinybusy::report_warning(
+        title = "Rodales sin áreas",
+        text = paste0(
+          "Los siguientes rodales sobran:\n",
+          setdiff(
+            rodales_def() %>% dplyr::count(N_Rodal) %>% .$N_Rodal,
+            rodales_def() %>% dplyr::count(N_Rodal) %>% .[areas_def(), ] %>% .$N_Rodal
+          ) %>%
+            shQuote() %>%
+            paste(collapse = ", ")
+        )
+      )
+    }
   })
 
   ### Predios ----
@@ -531,7 +596,7 @@ app_server <- function(input, output, session) {
     })
 
     if (df_ecc() %>% nrow() >= 1) {
-      shinybusy::report_warning(
+      shinyalert::shinyalert(
         title = "ECC arbórea en las parcelas",
         text = tags$p(paste0(
           "Ojo con las siguientes especies y parcelas:\n",
@@ -554,7 +619,12 @@ app_server <- function(input, output, session) {
             dplyr::bind_rows() %>%
             dplyr::pull(SP) %>%
             paste0(collapse = "\n")
-        ))
+        )),
+        html = TRUE,
+        type = "warning",
+        closeOnEsc = T,
+        showConfirmButton = T,
+        animation = T
       )
     }
   })

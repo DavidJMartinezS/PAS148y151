@@ -761,8 +761,12 @@ get_carto_digital <- function(
   } else {
     var_suelo <- dplyr::syms(c("Clase_Eros", "Cat_Erosio"))
   }
-  stopifnot("Sobran rodales" = nrow(rodales %>% dplyr::count(N_Rodal)) == nrow(rodales %>% dplyr::count(N_Rodal) %>% .[areas, ]))
-  stopifnot("Sobran predios" = nrow(predios %>% dplyr::count(N_Predio)) == nrow(predios[areas, ]))
+  if (nrow(rodales %>% dplyr::count(N_Rodal)) > nrow(rodales %>% dplyr::count(N_Rodal) %>% .[areas, ])) {
+    warning("Sobran rodales")
+  }
+  if (nrow(predios %>% dplyr::count(N_Predio)) > nrow(predios[areas, ])) {
+    warning("Sobran predios")
+  }
   stopifnot("DEM debe ser un objeto star o bien la ruta del archivo" = (class(dem) %in% c("character", "stars")) %>% any())
   if (class(dem) == "character") {
     stopifnot("ruta del archivo no encontrada" = file.exists(dem))

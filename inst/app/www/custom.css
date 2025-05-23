@@ -64,7 +64,8 @@
 
 .carousel-control .glyphicon-chevron-left, .carousel-control .icon-prev,
 .carousel-control .glyphicon-chevron-right, .carousel-control .icon-next{
-  color: darkseagreen;
+  /*color: darkseagreen;*/
+  color: #6FB58F;
 }
 .carousel-indicators {
   bottom: -50px !important;
@@ -103,7 +104,7 @@ a.carousel-control.right:focus {
 }
 
 .progress-bar {
-  background-color:#69A897 !important;
+  background-color:#6FB58F !important;
 }
 
 #flex {

@@ -9,7 +9,8 @@
 #' @export
 #'
 #' @importFrom shiny tags
-#' @importFrom shinybusy notify_success report_failure
+#' @importFrom shinyalert shinyalert
+#' @importFrom shinybusy notify_success
 #' @importFrom sf st_is st_as_sf st_crs st_intersection st_union st_collection_extract st_drop_geometry
 #' @importFrom dplyr count filter pull
 check_bd_flora <- function(x, y = NULL, shiny = F){
@@ -40,7 +41,7 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
     # Verificar coberturas ----
     if (!x$Cob_BB %in% c("fp", "r", "+", "1", "2", "3", "4", "5", "---") %>% all()) {
       if (shiny) {
-        shinybusy::report_failure(
+        shinyalert::shinyalert(
           title = "Coberturas de Braun-Blanquet que no corresponden",
           text = tags$p(
             "Las coberturas de Braun-Blanquet deben limitarse a las siguientes nomenclaturas:",
@@ -55,7 +56,12 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
               setdiff(unique(x$Cob_BB), c("fp", "r", "+", "1", "2", "3", "4", "5", "---")) %>% shQuote(),
               collapse = ", "
             )
-          )
+          ),
+          html = TRUE,
+          type = "error",
+          closeOnEsc = T,
+          showConfirmButton = T,
+          animation = T
         )
       } else {
         cat(
@@ -83,7 +89,7 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
       all(. == 7)
     ) {
       if (shiny) {
-        shinybusy::report_failure(
+        shinyalert::shinyalert(
           title = "Error en coordenadas",
           text = tags$p(
             "Revisar las coordenadas de las siguientes parcelas:", rep_br(2),
@@ -94,7 +100,12 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
                 shQuote(),
               collapse = ", "
             )
-          )
+          ),
+          html = TRUE,
+          type = "error",
+          closeOnEsc = T,
+          showConfirmButton = T,
+          animation = T
         )
       } else {
         cat(
@@ -121,7 +132,7 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
         .[] >= 1
       ) {
         if (shiny) {
-          shinybusy::report_failure(
+          shinyalert::shinyalert(
             title = "Mismas parcela, diferentes coordenadas!",
             text = tags$p(
               "Las siguientes parcelas presentan mas de una coordenada teniendo la misma campaña y cuadrilla:",
@@ -135,7 +146,12 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
                   shQuote(),
                 collapse = ", "
               )
-            )
+            ),
+            html = TRUE,
+            type = "error",
+            closeOnEsc = T,
+            showConfirmButton = T,
+            animation = T
           )
         } else {
           cat(
@@ -163,7 +179,7 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
         .[] >= 1
       ) {
         if (shiny) {
-          shinybusy::report_failure(
+          shinyalert::shinyalert(
             title = "Mismas parcela, diferentes cuadrillas!",
             text = tags$p(
               "Las siguientes parcelas presentan mas de una cuadrilla teniendo la misma campaña y coordenada:",
@@ -177,7 +193,12 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
                   shQuote(),
                 collapse = ", "
               )
-            )
+            ),
+            html = TRUE,
+            type = "error",
+            closeOnEsc = T,
+            showConfirmButton = T,
+            animation = T
           )
         } else {
           cat(
@@ -205,7 +226,7 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
         .[] >= 1
       ) {
         if (shiny) {
-          shinybusy::report_failure(
+          shinyalert::shinyalert(
             title = "Mismas parcela, diferentes campañas!",
             text = tags$p(
               "Las siguientes parcelas se repiten en más de una campaña:",
@@ -219,7 +240,12 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
                   shQuote(),
                 collapse = ", "
               )
-            )
+            ),
+            html = TRUE,
+            type = "error",
+            closeOnEsc = T,
+            showConfirmButton = T,
+            animation = T
           )
         } else {
           cat(
@@ -253,7 +279,7 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
         all(. == 1)
       ) {
         if (shiny) {
-          shinybusy::report_failure(
+          shinyalert::shinyalert(
             title = "Mismas parcela, diferentes coordenadas!",
             text = tags$p(
               "Las siguientes parcelas presentan mas de una coordenada:",
@@ -267,7 +293,12 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
                   shQuote(),
                 collapse = ", "
               )
-            )
+            ),
+            html = TRUE,
+            type = "error",
+            closeOnEsc = T,
+            showConfirmButton = T,
+            animation = T
           )
         } else {
           cat(

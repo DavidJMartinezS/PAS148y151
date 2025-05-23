@@ -226,7 +226,7 @@ app_ui <- function(request) {
 
                   ### Objetos espaciales ----
                   mod_leer_sf_ui("cart_area", "Ingrese shapefile de áreas de corta") %>%
-                    add_help_text(title = "Campos minimos requeridos:\n'Nom_Predio', 'N_Area', 'Clase_Uso'"),
+                    add_help_text(title = "Campos minimos requeridos:\n'Nom_Predio', 'N_Area', 'Clase_Uso/Clase_Eros'"),
                   tags$div(style = "margin-top: -10px"),
                   mod_leer_sf_ui("cart_rodales", "Ingrese shapefile de rodales") %>%
                     add_help_text(title = "Campos minimos requeridos:\n'N_Rodal', 'Tipo_For'"),
@@ -352,6 +352,15 @@ app_ui <- function(request) {
                     style = "margin-bottom: 10px"
                   ),
                   tags$h4("Apéndices 2 y 3 (Densidad de especies y ubicación de parcela)", style = "font-weight: bold;"),
+                  tags$div(
+                    style = "color: #0461b8; font-size: 16px",
+                    icon("circle-info"),
+                    tags$span(
+                      "Para poder generar estos apéndices debe cargar la base de datos con las parcelas
+                      de inventario floristico y las capas de rodales y predios.
+                      De forma opcional puede cargar la base de datos con las parcelas de cobertura."
+                    )
+                  ),
                   tags$div(style = "margin-top: 10px"),
                   shinyWidgets::materialSwitch(
                     inputId = "add_bd_pcob",
@@ -374,6 +383,15 @@ app_ui <- function(request) {
                   ),
                   tags$br(),
                   tags$h4("Apéndice 5 - Tablas formulario CONAF", style = "font-weight: bold;"),
+                  tags$div(
+                    style = "color: #0461b8; font-size: 16px",
+                    icon("circle-info"),
+                    tags$span(
+                      "Para poder generar este apéndice debe de haber generado la cartografía digital a
+                      incluyendo la base de datos de con las parcelas de inventario floristico.
+                       De forma opcional puede cargar la capa de obras y la base de datos de fauna."
+                    )
+                  ),
                   div(style = "margin-top: 15px"),
                   tags$div(
                     style = "margin-left: -15px",
