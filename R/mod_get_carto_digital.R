@@ -11,8 +11,11 @@
 #' @importFrom shinyjs enable disable
 #' @importFrom shinybusy show_modal_spinner remove_modal_spinner report_warning
 #' @importFrom sf st_transform st_make_valid st_union st_centroid st_coordinates st_as_text st_geometry
-#' @importFrom dplyr rename_if mutate rename_all
-#' @importFrom stringi stri_detect_regex stri_trans_toupper stri_trans_general
+#' @importFrom dplyr rename_if mutate rename_all select mutate_at left_join relocate
+#' @importFrom stringi stri_detect_regex stri_trans_toupper stri_trans_general stri_trans_totitle
+#' @importFrom purrr map_vec
+#' @importFrom tidyr unnest
+#' @importFrom flextable flextable merge_v autofit theme_box valign align
 mod_get_carto_digital_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -88,7 +91,9 @@ mod_get_carto_digital_ui <- function(id) {
         size = "sm",
         color = "success"
       ),
-      mod_downfiles_ui(ns("down_carto"))
+      mod_downfiles_ui(ns("down_carto")),
+      mod_downfiles_ui(ns("down_tbl_areas"), label = "Tabla planos áreas", style = "material-flat"),
+      mod_downfiles_ui(ns("down_tbl_predios"), label = "Tabla planos predios", style = "material-flat")
     )
   )
 }
@@ -459,7 +464,7 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
         "Hidrografia_osm",
         "Curvas_niv"
       ) %>%
-        str_c(.,input$NOMPREDIO, sep = "_") %>%
+        paste0(.,input$NOMPREDIO, sep = "_") %>%
         subset(
           c(rep(T, 7),
             input$add_parcelas,
@@ -471,6 +476,59 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
             input$add_curv_niv
           )
         )
+    )
+    flextable::set_flextable_defaults(
+      decimal.mark = ",",
+      big.mark = "."
+    )
+
+    tbl_planos_areas <- eventReactive(carto_digital(),{
+      req(carto_digital())
+      var_suelo <- if (input$PAS == 148) dplyr::sym("Clase_Uso") else dplyr::sym("Clase_Eros")
+      nom_suelo <- if (input$PAS == 148) "Clase Uso Suelo" else "Grado de Erosión"
+      carto_digital()$tabla_areas %>%
+        dplyr::select(N_Predio, N_Area, Ran_Pend, !!var_suelo, Sup_ha) %>%
+        `names<-`(c("N° Predio", "Área N°", "Rango Pendiente (%)", nom_suelo, "Superficie área de corta (ha)")) %>%
+        flextable::flextable() %>%
+        flextable::merge_v(j = c(1)) %>%
+        flextable::autofit() %>%
+        flextable::theme_box() %>%
+        flextable::valign(part = "header", valign = "center") %>%
+        flextable::align(part = "header", align = "center")
+    })
+
+    tbl_planos_predios <- eventReactive(carto_digital(),{
+      req(carto_digital())
+      carto_digital()$tabla_predios %>%
+        mutate(Pto_ref = NA_character_, Este = as.integer(NA), Norte = as.integer(NA)) %>%
+        dplyr::mutate(Pto_ref = NA_character_, Este = as.integer(NA), Norte = as.integer(NA)) %>%
+        dplyr::select(N_Predio, Nom_Predio, Propietari, Rol, Comuna, Sup_ha, Pto_ref, Este, Norte) %>%
+        dplyr::mutate_at(vars(Comuna), ~purrr::map_vec(., stringi::stri_split_regex, " - ")) %>%
+        tidyr::unnest(Comuna) %>%
+        dplyr::select(-c(dplyr::matches("provincia"), dplyr::matches("region"))) %>%
+        dplyr::left_join(comunas_df %>% dplyr::select(COMUNA, PROVINCIA, REGION) %>% dplyr::rename_all(stringi::stri_trans_totitle)) %>%
+        dplyr::relocate(c(Provincia, Region), .after = Comuna) %>%
+        `names<-`(
+          c("N° Predio", "Nombre Predio", "Nombre del propietario/a", "ROL", "Comuna", "Provincia",
+            "Región", "Superficie predial (ha)", "Punto de referencia", "Este", "Norte")
+        ) %>%
+        flextable::flextable() %>%
+        flextable::merge_v(j = c(1:4,6:8)) %>%
+        flextable::autofit() %>%
+        flextable::theme_box() %>%
+        flextable::valign(part = "header", valign = "center") %>%
+        flextable::align(part = "header", align = "center")
+    })
+
+    mod_downfiles_server(
+      id = "down_tbl_areas",
+      x = tbl_planos_areas(),
+      name_save = "Tabla_planos_areas"
+    )
+    mod_downfiles_server(
+      id = "down_tbl_predios",
+      x = tbl_planos_predios(),
+      name_save = "Tabla_planos_predios"
     )
   })
 }

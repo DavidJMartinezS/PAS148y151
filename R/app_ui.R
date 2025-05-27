@@ -325,7 +325,9 @@ app_ui <- function(request) {
                       size = "sm",
                       color = "success"
                     ),
-                    mod_downfiles_ui("down_carto")
+                    mod_downfiles_ui("down_carto"),
+                    mod_downfiles_ui("down_tbl_areas", label = "Tabla planos áreas", style = "material-flat"),
+                    mod_downfiles_ui("down_tbl_predios", label = "Tabla planos predios", style = "material-flat")
                   )
                 )
               ),

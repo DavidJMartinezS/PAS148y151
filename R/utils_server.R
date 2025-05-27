@@ -11,8 +11,11 @@
 #' @importFrom shinyjs reset
 #' @import dataPAS
 #' @noRd
-provincias_list <- sf::read_sf(system.file("Comunas.gdb", package = "dataPAS")) %>%
-  sf::st_drop_geometry() %>%
+comunas_df <- sf::read_sf(system.file("Comunas.gdb", package = "dataPAS")) %>%
+  sf::st_drop_geometry()
+
+#' @noRd
+provincias_list <- comunas_df %>%
   dplyr::group_by(CUT_REG, REGION, PROVINCIA) %>%
   dplyr::tally() %>% dplyr::ungroup() %>%
   dplyr::mutate_at(

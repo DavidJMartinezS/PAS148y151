@@ -78,7 +78,7 @@ get_pred_rod_area <- function(
       sf::st_collection_extract("POLYGON")
     LB <- LB[provincia_sf, ]
     predios <- predios[provincia_sf, ]
-  } %>% suppressWarnings()
+  } %>% suppressWarnings() %>% suppressMessages()
 
   group_list <- c("N_Predio", "Nom_Predio", "Tipo_fores") %>%
     {if (!is.null(group_by_LB)) c(., group_by_LB) %>% unique() else .} %>%
@@ -111,8 +111,8 @@ get_pred_rod_area <- function(
     sf::st_cast("POLYGON") %>%
     sf::st_make_valid() %>%
     sf::st_collection_extract("POLYGON") %>%
-    dplyr::filter(sf::st_area(geometry) %>% units::drop_units() %>% janitor::round_half_up() != 0) %>%
-    suppressWarnings()
+    dplyr::filter(sf::st_area(geometry) %>% units::drop_units() %>% janitor::round_half_up(1) != 0) %>%
+    suppressWarnings() %>% suppressMessages()
 
   Rodales <- LB %>%
     {if (PAS == 148){
@@ -180,7 +180,7 @@ get_pred_rod_area <- function(
     dplyr::arrange(N_Rodal) %>%
     dplyr::mutate_at(dplyr::vars(Nom_Predio), tidyr::replace_na, "S/I") %>%
     dplyr::select(N_Predio, Nom_Predio, PID, N_Rodal, Tipo_Bos, Tipo_For, Tipo_fores, Subtipo_fo, Tipo_veg, Regulacion, Sup_ha) %>%
-    suppressMessages() %>% suppressWarnings()
+    suppressWarnings() %>% suppressMessages()
 
   if (any(Rodales %>%  dplyr::group_by(N_Rodal) %>%  dplyr::summarise_at("Sup_ha", sum) %>% .$Sup_ha < 0.5) & PAS == 148) {
     warning(
@@ -262,7 +262,7 @@ get_pred_rod_area <- function(
       N_a = paste(N_Predio, stringi::stri_pad_left(N_r, stringi::stri_length(max(N_r)), pad = "0"), sep = ".")
     ) %>%
     dplyr::select(!!!group_list, Tipo_For, Tipo_veg, Tipo_Bos, N_Rodal, N_a, N_Area, N_Pred_ori, !!var_suelo, Sup_ha, Sup_m2) %>%
-    suppressWarnings()
+    suppressWarnings() %>% suppressMessages()
 
   Predios <- predios %>%
     dplyr::filter(N_Predio %in% unique(BN_areas$N_Pred_ori)) %>%
@@ -274,7 +274,7 @@ get_pred_rod_area <- function(
     dplyr::arrange(N_Predio) %>%
     dplyr::mutate_at(dplyr::vars(Nom_Predio, Rol, Propietari), tidyr::replace_na, "S/I") %>%
     dplyr::select(N_Predio, Nom_Predio, Rol, Propietari) %>%
-    suppressWarnings()
+    suppressWarnings() %>% suppressMessages()
 
   if (nrow(Rodales %>% dplyr::count(N_Rodal)) > nrow(Rodales %>% dplyr::count(N_Rodal) %>% .[BN_areas, ])) {
     warning(

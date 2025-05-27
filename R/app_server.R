@@ -12,38 +12,6 @@ app_server <- function(input, output, session) {
 
   crs <- reactive({ifelse(input$huso == "18S", 32718, 32719)})
 
-  # inputs <- reactiveValues(bd_flora = NULL, areas_def = NULL, rodales_def = NULL)
-  # carto <- reactiveValues(tabla_predio = NULL, tabla_areas = NULL, uso_actual = NULL)
-  #
-  # mod_PredRodArea_server(
-  #   "PredRodArea",
-  #   crs = crs(),
-  #   dec_sup = input$n_dec,
-  #   provincia = input$provincia,
-  #   PAS = input$PAS,
-  #   huso = input$huso
-  # )
-
-  # mod_get_carto_digital_server(
-  #   "carto_digital",
-  #   crs = crs(),
-  #   dec_sup = input$n_dec,
-  #   huso = input$huso,
-  #   inputs = inputs,
-  #   carto = carto
-  # )
-
-  # mod_apendices_server(
-  #   "apendices",
-  #   PAS = input$PAS,
-  #   provincia = input$provincia,
-  #   huso = input$huso,
-  #   crs = crs(),
-  #   inputs = inputs,
-  #   carto = carto
-  # )
-  #
-  # output$tbl_flora <- renderTable({carto$bd_flora %>% head()})
   # AYUDAS ----
   ## Pred Rod Area ----
   LB <- mod_leer_sf_server(id = "linea_base", crs = crs(), fx = function(x){
@@ -792,7 +760,59 @@ app_server <- function(input, output, session) {
     )
   })
 
+  flextable::set_flextable_defaults(
+    decimal.mark = ",",
+    big.mark = "."
+  )
 
+  tbl_planos_areas <- eventReactive(carto_digital(),{
+    req(carto_digital())
+    var_suelo <- if (input$PAS == 148) dplyr::sym("Clase_Uso") else dplyr::sym("Clase_Eros")
+    nom_suelo <- if (input$PAS == 148) "Clase Uso Suelo" else "Grado de Erosión"
+    carto_digital()$tabla_areas %>%
+      dplyr::select(N_Predio, N_Area, Ran_Pend, !!var_suelo, Sup_ha) %>%
+      `names<-`(c("N° Predio", "Área N°", "Rango Pendiente (%)", nom_suelo, "Superficie área de corta (ha)")) %>%
+      flextable::flextable() %>%
+      flextable::merge_v(j = c(1)) %>%
+      flextable::autofit() %>%
+      flextable::theme_box() %>%
+      flextable::valign(part = "header", valign = "center") %>%
+      flextable::align(part = "header", align = "center")
+  })
+
+  tbl_planos_predios <- eventReactive(carto_digital(),{
+    req(carto_digital())
+    carto_digital()$tabla_predios %>%
+      mutate(Pto_ref = NA_character_, Este = as.integer(NA), Norte = as.integer(NA)) %>%
+      dplyr::mutate(Pto_ref = NA_character_, Este = as.integer(NA), Norte = as.integer(NA)) %>%
+      dplyr::select(N_Predio, Nom_Predio, Propietari, Rol, Comuna, Sup_ha, Pto_ref, Este, Norte) %>%
+      dplyr::mutate_at(vars(Comuna), ~purrr::map_vec(., stringi::stri_split_regex, " - ")) %>%
+      tidyr::unnest(Comuna) %>%
+      dplyr::select(-c(dplyr::matches("provincia"), dplyr::matches("region"))) %>%
+      dplyr::left_join(comunas_df %>% dplyr::select(COMUNA, PROVINCIA, REGION) %>% dplyr::rename_all(stringi::stri_trans_totitle)) %>%
+      dplyr::relocate(c(Provincia, Region), .after = Comuna) %>%
+      `names<-`(
+        c("N° Predio", "Nombre Predio", "Nombre del propietario/a", "ROL", "Comuna", "Provincia",
+          "Región", "Superficie predial (ha)", "Punto de referencia", "Este", "Norte")
+      ) %>%
+      flextable::flextable() %>%
+      flextable::merge_v(j = c(1:4,6:8)) %>%
+      flextable::autofit() %>%
+      flextable::theme_box() %>%
+      flextable::valign(part = "header", valign = "center") %>%
+      flextable::align(part = "header", align = "center")
+  })
+
+  mod_downfiles_server(
+    id = "down_tbl_areas",
+    x = tbl_planos_areas(),
+    name_save = "Tabla_planos_areas"
+  )
+  mod_downfiles_server(
+    id = "down_tbl_predios",
+    x = tbl_planos_predios(),
+    name_save = "Tabla_planos_predios"
+  )
 
   # Apendices ----
   ## Apendice 2 Y 3 ----
