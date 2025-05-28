@@ -18,39 +18,29 @@ output: github_document
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
+<div style="text-align: center;">
+![](inst/app/www/favicon.ico)
+</div>
+
+Este paquete está elaborado con el propósito de ayudar en la elaboración de los Permisos Ambientales Sectoriales (PAS) 148 y 151, por medio de una aplicación que facilita la elaboración de la cartografía digital y los apéndices. 
+El paquete consta principalmente de la aplicación, además de algunas funciones que son utilizadas en esta misma que podrian ejecutarse en un entorno de R. 
+Para un uso correcto de la aplicación, por favor tener en consideración las instrucciones que están en la primera página de la aplicación. 
 
 ## Installation
 
-You can install the development version of `{PAS148y151}` like so:
+Para la instalación del paquete `{PAS148y151}` debe de ejecutar:
 
-```{r}
-# FILL THIS IN! HOW CAN PEOPLE INSTALL YOUR DEV PACKAGE?
+```{r, eval = FALSE}
+options(timeout = 600)
+remotes::install_github("DavidJMartinezS/dataPAS", dependencies = T, force = T)
+remotes::install_github("DavidJMartinezS/PAS148y151", dependencies = T, force = T)
 ```
 
 ## Run
 
-You can launch the application by running:
+Puede iniciar la aplicación ejecutando:
 
 ```{r, eval = FALSE}
 PAS148y151::run_app()
 ```
 
-## About
-
-You are reading the doc about version : `r golem::pkg_version()`
-
-This README has been compiled on the
-
-```{r}
-Sys.time()
-```
-
-Here are the tests results and package coverage:
-
-```{r echo = FALSE}
-unloadNamespace("PAS148y151")
-```
-
-```{r, error = TRUE}
-covr::package_coverage()
-```

@@ -280,14 +280,14 @@
     },
     "data.table": {
       "Package": "data.table",
-      "Version": "1.17.0",
+      "Version": "1.17.4",
       "Source": "Repository",
       "Repository": "RSPM",
       "Requirements": [
         "R",
         "methods"
       ],
-      "Hash": "d06cd1a942bb17b607df7d57048d6840"
+      "Hash": "70da4288a2c210772673d98f767e763d"
     },
     "dataPAS": {
       "Package": "dataPAS",
@@ -404,7 +404,7 @@
     },
     "flextable": {
       "Package": "flextable",
-      "Version": "0.9.7",
+      "Version": "0.9.8",
       "Source": "Repository",
       "Repository": "RSPM",
       "Requirements": [
@@ -424,7 +424,7 @@
         "uuid",
         "xml2"
       ],
-      "Hash": "e3201bd3a94311654ff35cf2ddc3343e"
+      "Hash": "afd351be657ef830fa86659ba3972c21"
     },
     "fontBitstreamVera": {
       "Package": "fontBitstreamVera",
@@ -535,14 +535,14 @@
     },
     "generics": {
       "Package": "generics",
-      "Version": "0.1.3",
+      "Version": "0.1.4",
       "Source": "Repository",
       "Repository": "RSPM",
       "Requirements": [
         "R",
         "methods"
       ],
-      "Hash": "15e9634c0fcd294799e9b2e929ed1b86"
+      "Hash": "4b29bf698d0c7bdb9f1e4976e7ade41d"
     },
     "glue": {
       "Package": "glue",
@@ -856,7 +856,7 @@
     },
     "officer": {
       "Package": "officer",
-      "Version": "0.6.8",
+      "Version": "0.6.9",
       "Source": "Repository",
       "Repository": "RSPM",
       "Requirements": [
@@ -872,7 +872,7 @@
         "xml2",
         "zip"
       ],
-      "Hash": "f3c00dd7da020285bb78dc4e43893174"
+      "Hash": "dfc2fbc7bdadd38e93aed7e186c6fc1d"
     },
     "openssl": {
       "Package": "openssl",
@@ -1167,7 +1167,7 @@
     },
     "sf": {
       "Package": "sf",
-      "Version": "1.0-20",
+      "Version": "1.0-21",
       "Source": "Repository",
       "Repository": "RSPM",
       "Requirements": [
@@ -1186,7 +1186,7 @@
         "units",
         "utils"
       ],
-      "Hash": "b99bc68a928d7d9aea4aad10d970edf1"
+      "Hash": "14a8dae2a678fa953907893a9df561c0"
     },
     "shiny": {
       "Package": "shiny",
@@ -1631,17 +1631,17 @@
     },
     "yaml": {
       "Package": "yaml",
-      "Version": "2.3.8",
+      "Version": "2.3.10",
       "Source": "Repository",
       "Repository": "RSPM",
-      "Hash": "29240487a071f535f5e5d5a323b7afbd"
+      "Hash": "51dab85c6c98e50a18d7551e9d49f76c"
     },
     "zip": {
       "Package": "zip",
-      "Version": "2.3.2",
+      "Version": "2.3.3",
       "Source": "Repository",
       "Repository": "RSPM",
-      "Hash": "2f2ac1424654714391fe94dd69e196a9"
+      "Hash": "6ebe4b1dc74c3e50e74e316323629583"
     }
   }
 }
