@@ -139,7 +139,11 @@ get_pred_rod_area <- function(
     sf::st_collection_extract("POLYGON") %>%
     {if (is.null(group_by_LB)){
       .[] %>%
-        dplyr::group_by(., PID, Regulacion, N_Predio, Nom_Predio, Tipo_fores, Subtipo_fo, Tipo_veg) %>%
+        {if (n_rodal_ord) {
+          dplyr::group_by(., PID, N_Rodal, Regulacion, N_Predio, Nom_Predio, Tipo_fores, Subtipo_fo, Tipo_veg)
+        } else {
+          dplyr::group_by(., PID, Regulacion, N_Predio, Nom_Predio, Tipo_fores, Subtipo_fo, Tipo_veg)
+        }} %>%
         dplyr::summarise(geometry = sf::st_union(geometry)) %>%
         dplyr::ungroup() %>%
         sf::st_collection_extract("POLYGON")
