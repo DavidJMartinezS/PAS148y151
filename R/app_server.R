@@ -5,6 +5,7 @@
 #' @importFrom shiny reactive reactiveValues renderTable fluidRow tags
 #' @importFrom shinydashboardPlus renderUser dashboardUser socialButton
 #' @importFrom bsplus bs_embed_tooltip
+#' @importFrom shinybusy config_report
 #'
 #' @noRd
 app_server <- function(input, output, session) {
@@ -283,6 +284,10 @@ app_server <- function(input, output, session) {
             .$N_Rodal %>%
             shQuote() %>%
             paste0(collapse = ", ")
+        ),
+        shinybusy::config_report(
+          titleFontSize = "24px",
+          messageFontSize = "18px"
         )
       )
     }
@@ -305,21 +310,29 @@ app_server <- function(input, output, session) {
             .$N_Rodal %>%
             shQuote() %>%
             paste0(collapse = ", ")
+        ),
+        shinybusy::config_report(
+          titleFontSize = "24px",
+          messageFontSize = "18px"
         )
       )
     }
     if (nrow(rodales_def() %>% dplyr::count(N_Rodal)) >
-        nrow(rodales_def() %>% dplyr::count(N_Rodal) %>% .[areas_def(), ])) {
+        nrow(areas_def() %>% dplyr::count(N_Rodal))) {
       shinybusy::report_warning(
         title = "Rodales sin áreas",
         text = paste0(
           "Los siguientes rodales sobran:\n",
           setdiff(
             rodales_def() %>% dplyr::count(N_Rodal) %>% .$N_Rodal,
-            rodales_def() %>% dplyr::count(N_Rodal) %>% .[areas_def(), ] %>% .$N_Rodal
+            areas_def() %>% dplyr::count(N_Rodal) %>% .$N_Rodal
           ) %>%
             shQuote() %>%
             paste(collapse = ", ")
+        ),
+        shinybusy::config_report(
+          titleFontSize = "24px",
+          messageFontSize = "18px"
         )
       )
     }
@@ -486,63 +499,75 @@ app_server <- function(input, output, session) {
 
   ### BD Flora ----
   # bd_flora <- mod_bd_flora_server("bd_flora", rodales_def = rodales_def())
-  bd_flora <- eventReactive(input$bd_flora, {
-    req(c(input$bd_flora$datapath, rodales_def()))
+  bd_flora <- reactive({
+    if (isTruthy(input$bd_flora$datapath)) {
+      req(c(rodales_def()))
 
-    read_xlsx(input$bd_flora$datapath) %>%
-      dplyr::rename_all(
-        ~ stringi::stri_trans_totitle(
-          stringi::stri_trans_general(.,"Latin-ASCII"),
-          opts_brkiter = stringi::stri_opts_brkiter(type = "sentence")
-        )) %>%
-      dplyr::rename_if(names(.) %>% stringi::stri_cmp_equiv("cob_bb", strength = 1), ~ "Cob_BB") %>%
-      dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("p500", case_insensitive = T), ~ "N_ind") %>%
-      dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("ds.*68", case_insensitive = T), ~ "DS_68") %>%
-      dplyr::rename_at(
-        dplyr::vars(dplyr::matches("^rce"), dplyr::contains("UTM"), dplyr::matches("ds_68")),
-        stringi::stri_trans_toupper
-      ) %>%
-      dplyr::mutate_at(
-        dplyr::vars(dplyr::contains("Cob_BB")),
-        ~ stringi::stri_trim(stringi::stri_trans_tolower(.))
-      ) %>%
-      dplyr::mutate_at(
-        dplyr::vars(dplyr::matches("Especie")),
-        ~ stringi::stri_trim(stringi::stri_trans_totitle(., opts_brkiter = stringi::stri_opts_brkiter(type = "sentence")))
-      ) %>%
-      dplyr::mutate_at("N_ind", as.integer) %>%
-      {if (input$PAS == 148) {
-        .[] %>%
-          dplyr::filter(
-            Habito %>%
-              stringi::stri_trans_general("Latin-ASCII") %>%
-              stringi::stri_detect_regex("arbol", case_insensitive = T),
-            !Cob_BB %>%
-              stringi::stri_trans_tolower() %in% c(NA_character_, "fp", "---"),
-            !N_ind %in% c(NA, 0)
-          )
-      } else {
-        .[] %>%
-          dplyr::filter(
-            DS_68 %>% stringi::stri_cmp_equiv("originaria", strength = 1),
-            !Cob_BB %>% stringi::stri_trans_tolower() %in% c(NA_character_, "fp", "---"),
-            !N_ind %in% c(NA, 0)
-          )
-      }} %>%
-      dplyr::select(-dplyr::matches("Nom_Predio|N_Rodal|Tipo_veg|Tipo_fores|Tipo_For|Subtipo_fo")) %>%
-      sf::st_as_sf(coords = c("UTM_E","UTM_N"), crs = sf::st_crs(rodales_def()), remove = F) %>%
-      sf::st_join(rodales_def() %>% dplyr::select(Nom_Predio, N_Rodal, Tipo_fores, Tipo_For, Subtipo_fo, Tipo_veg)) %>%
-      dplyr::mutate_at("N_Rodal", as.integer) %>%
-      sf::st_drop_geometry() %>%
-      dplyr::mutate_at("N_ind", as.integer) %>%
-      dplyr::mutate(Nha = N_ind * 20) %>%
-      dplyr::arrange(N_Rodal) %>%
-      dplyr::group_by(Parcela, UTM_E, UTM_N) %>%
-      dplyr::arrange(N_Rodal) %>%
-      dplyr::mutate(N = dplyr::cur_group_id()) %>%
-      dplyr::group_by(N_Rodal, N) %>%
-      dplyr::mutate(N_Parc = dplyr::cur_group_id()) %>%
-      dplyr::ungroup()
+      read_xlsx(input$bd_flora$datapath) %>%
+        dplyr::rename_all(
+          ~ stringi::stri_trans_totitle(
+            stringi::stri_trans_general(.,"Latin-ASCII"),
+            opts_brkiter = stringi::stri_opts_brkiter(type = "sentence")
+          )) %>%
+        dplyr::rename_if(names(.) %>% stringi::stri_cmp_equiv("cob_bb", strength = 1), ~ "Cob_BB") %>%
+        dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("p500", case_insensitive = T), ~ "N_ind") %>%
+        dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("ds.*68", case_insensitive = T), ~ "DS_68") %>%
+        dplyr::rename_at(
+          dplyr::vars(dplyr::matches("^rce"), dplyr::contains("UTM"), dplyr::matches("ds_68")),
+          stringi::stri_trans_toupper
+        ) %>%
+        dplyr::mutate_at(
+          dplyr::vars(dplyr::contains("Cob_BB")),
+          ~ stringi::stri_trim(stringi::stri_trans_tolower(.))
+        ) %>%
+        dplyr::mutate_at(
+          dplyr::vars(dplyr::matches("Especie")),
+          ~ stringi::stri_trim(stringi::stri_trans_totitle(., opts_brkiter = stringi::stri_opts_brkiter(type = "sentence")))
+        ) %>%
+        dplyr::mutate_at("N_ind", as.integer) %>%
+        {if (input$PAS == 148) {
+          .[] %>%
+            dplyr::filter(
+              Habito %>%
+                stringi::stri_trans_general("Latin-ASCII") %>%
+                stringi::stri_detect_regex("arbol", case_insensitive = T),
+              !Cob_BB %>%
+                stringi::stri_trans_tolower() %in% c(NA_character_, "fp", "---"),
+              !N_ind %in% c(NA, 0)
+            )
+        } else {
+          .[] %>%
+            dplyr::filter(
+              DS_68 %>% stringi::stri_cmp_equiv("originaria", strength = 1),
+              !Cob_BB %>% stringi::stri_trans_tolower() %in% c(NA_character_, "fp", "---"),
+              !N_ind %in% c(NA, 0)
+            )
+        }} %>%
+        dplyr::select(-dplyr::matches("Nom_Predio|N_Rodal|Tipo_veg|Tipo_fores|Tipo_For|Subtipo_fo")) %>%
+        sf::st_as_sf(coords = c("UTM_E","UTM_N"), crs = sf::st_crs(rodales_def()), remove = F) %>%
+        sf::st_join(rodales_def() %>% dplyr::select(Nom_Predio, N_Rodal, Tipo_fores, Tipo_For, Subtipo_fo, Tipo_veg)) %>%
+        dplyr::mutate_at("N_Rodal", as.integer) %>%
+        sf::st_drop_geometry() %>%
+        dplyr::mutate_at("N_ind", as.integer) %>%
+        dplyr::mutate(Nha = N_ind * 20) %>%
+        dplyr::arrange(N_Rodal) %>%
+        dplyr::group_by(Parcela, UTM_E, UTM_N) %>%
+        dplyr::arrange(N_Rodal) %>%
+        dplyr::mutate(N = dplyr::cur_group_id()) %>%
+        dplyr::group_by(N_Rodal, N) %>%
+        dplyr::mutate(N_Parc = dplyr::cur_group_id()) %>%
+        dplyr::ungroup()
+    } else {
+      NULL
+    }
+  })
+
+  observeEvent(bd_flora(),{
+    if (is.null(bd_flora())) {
+      shinyjs::disable("add_parcelas")
+    } else {
+      shinyjs::enable("add_parcelas")
+    }
   })
 
   observeEvent(bd_flora(),{
@@ -674,17 +699,17 @@ app_server <- function(input, output, session) {
   ### Generar y descargar carto ----
   shinyjs::disable("get_carto_btn")
   observe({
-    req(c(areas_def(), rodales_def(), predios_def(), bd_flora()))
+    req(c(areas_def(), rodales_def(), predios_def(), input$dem$datapath))
     shinyjs::enable("get_carto_btn")
   })
   carto_digital <- eventReactive(input$get_carto_btn,{
-    req(c(areas_def(), rodales_def(), predios_def(), bd_flora()))
+    req(c(areas_def(), rodales_def(), predios_def(), input$dem$datapath))
     get_carto_digital(
       PAS = input$PAS,
       areas = areas_def(),
       rodales = rodales_def(),
       predios = predios_def(),
-      TipoFor_num = input$tipo_for,
+      TipoFor_num = T,
       dem = input$dem$datapath,
       add_parcelas = input$add_parcelas,
       bd_flora = bd_flora(),
@@ -708,7 +733,6 @@ app_server <- function(input, output, session) {
   })
 
   observeEvent(input$get_carto_btn,{
-    req(c(areas_def(), rodales_def(), predios_def(), bd_flora()))
     shinybusy::show_modal_spinner(
       spin = "flower",
       color = "#6FB58F",
@@ -754,7 +778,7 @@ app_server <- function(input, output, session) {
             if(input$add_cam == F) F else input$add_cam_osm,
             input$add_hidro,
             if(input$add_hidro == F) F else input$add_hidro_osm,
-            input$add_curv_niv
+            input$add_CN
           )
         )
     )
@@ -918,7 +942,10 @@ app_server <- function(input, output, session) {
 
   ## Atributos de rodal ----
   tabla_attr_rodal_0 <- reactive({
-    req(c(bd_flora(), rodales_def()))
+    shiny::validate(
+      shiny::need(shiny::isTruthy(bd_flora()), "Cargar excel con los datos de flora"),
+      shiny::need(shiny::isTruthy(rodales_def()), "Cargar capa de rodales")
+    )
     get_tabla_attr_rodal(
       PAS = input$PAS,
       parcelas_rodales = bd_flora(),

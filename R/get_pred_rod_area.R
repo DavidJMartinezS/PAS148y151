@@ -160,7 +160,11 @@ get_pred_rod_area <- function(
             sf::st_join(LB %>% dplyr::select(c("Subtipo_fo", "Tipo_veg")[!c("Subtipo_fo", "Tipo_veg") %in% group_list]), largest = T)
         } else .}
     }} %>%
-    {if ("N_Rodal" %in% names(.)) . else .[] %>% dplyr::group_by(PID) %>% dplyr::mutate(N_Rodal = as.integer(dplyr::cur_group_id())) %>% dplyr::ungroup()} %>%
+    {if ("N_Rodal" %in% names(.)) {
+      .[] %>% dplyr::group_by(N_Rodal) %>% dplyr::mutate(N_Rodal = as.integer(dplyr::cur_group_id())) %>% dplyr::ungroup()
+    } else {
+      .[] %>% dplyr::group_by(PID) %>% dplyr::mutate(N_Rodal = as.integer(dplyr::cur_group_id())) %>% dplyr::ungroup()
+    }} %>%
     dplyr::mutate(
       Tipo_Bos = ifelse(PAS == 148, "BN", "No aplica"),
       Tipo_For = dplyr::case_when(
@@ -243,6 +247,7 @@ get_pred_rod_area <- function(
         dplyr::ungroup()
     }} %>%
     dplyr::mutate_at(dplyr::vars(!!var_suelo), tidyr::replace_na, "S/I") %>%
+    dplyr::filter(sf::st_area(geometry) %>% units::drop_units() %>% janitor::round_half_up(1) != 0) %>%
     {if (group_by_dist) {
       .[] %>%
         dplyr::group_by(N_Rodal, N_Predio, !!var_suelo) %>%
@@ -280,13 +285,13 @@ get_pred_rod_area <- function(
     dplyr::select(N_Predio, Nom_Predio, Rol, Propietari) %>%
     suppressWarnings() %>% suppressMessages()
 
-  if (nrow(Rodales %>% dplyr::count(N_Rodal)) > nrow(Rodales %>% dplyr::count(N_Rodal) %>% .[BN_areas, ])) {
+  if (nrow(Rodales %>% dplyr::count(N_Rodal)) > nrow(BN_areas %>% dplyr::count(N_Rodal))) {
     warning(
       paste0(
         "Los siguientes rodales sobran:\n",
         setdiff(
           Rodales %>% dplyr::count(N_Rodal) %>% .$N_Rodal,
-          Rodales %>% dplyr::count(N_Rodal) %>% .[BN_areas, ] %>% .$N_Rodal
+          BN_areas %>% dplyr::count(N_Rodal) %>% .$N_Rodal
         ) %>%
           shQuote() %>% paste(collapse = ", ")
       )

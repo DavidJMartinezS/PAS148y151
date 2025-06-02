@@ -100,6 +100,7 @@ cart_rodales <- function(PAS, rodales, TipoFor_num = NULL, from_RCA = F, RCA = N
       dplyr::mutate_at(., "Tipo_For", as.integer)
     } else . } %>%
     dplyr::mutate_at("N_Rodal", as.integer) %>%
+    dplyr::arrange(N_Rodal) %>%
     dplyr::mutate(
       Tipo_Bos = ifelse(PAS == 148, "BN", "No aplica"),
       Sup_ha = sf::st_area(geometry) %>% units::set_units(ha) %>% units::drop_units() %>% janitor::round_half_up(dec_sup),
@@ -761,7 +762,7 @@ get_carto_digital <- function(
   } else {
     var_suelo <- dplyr::syms(c("Clase_Eros", "Cat_Erosio"))
   }
-  if (nrow(rodales %>% dplyr::count(N_Rodal)) > nrow(rodales %>% dplyr::count(N_Rodal) %>% .[areas, ])) {
+  if (nrow(rodales %>% dplyr::count(N_Rodal)) > nrow(areas %>% dplyr::count(N_Rodal))) {
     warning("Sobran rodales")
   }
   if (nrow(predios %>% dplyr::count(N_Predio)) > nrow(predios[areas, ])) {
@@ -876,7 +877,7 @@ get_carto_digital <- function(
       Areas = carto_area,
       Rodales = carto_rodales,
       Predios = carto_predios %>% select(-Propietari),
-      Suelos = carto_suelos %>% {if(PAS == 151) select(.,-Clase_Eros) else .} ,
+      Suelos = carto_suelos %>% {if(PAS == 151) select(.,-Clase_Eros) else .},
       Ran_pend = carto_ran_pend %>% select(-Pend_media),
       tabla_predios = tabla_predios,
       tabla_areas = tabla_areas,
