@@ -318,14 +318,14 @@ app_server <- function(input, output, session) {
       )
     }
     if (nrow(rodales_def() %>% dplyr::count(N_Rodal)) >
-        nrow(areas_def() %>% dplyr::count(N_Rodal))) {
+        nrow(rodales_def()[areas_def(), ] %>% dplyr::count(N_Rodal))) {
       shinybusy::report_warning(
         title = "Rodales sin áreas",
         text = paste0(
           "Los siguientes rodales sobran:\n",
           setdiff(
             rodales_def() %>% dplyr::count(N_Rodal) %>% .$N_Rodal,
-            areas_def() %>% dplyr::count(N_Rodal) %>% .$N_Rodal
+            rodales_def()[areas_def(),] %>% dplyr::count(N_Rodal) %>% .$N_Rodal
           ) %>%
             shQuote() %>%
             paste(collapse = ", ")
@@ -545,6 +545,9 @@ app_server <- function(input, output, session) {
         }} %>%
         dplyr::select(-dplyr::matches("Nom_Predio|N_Rodal|Tipo_veg|Tipo_fores|Tipo_For|Subtipo_fo")) %>%
         sf::st_as_sf(coords = c("UTM_E","UTM_N"), crs = sf::st_crs(rodales_def()), remove = F) %>%
+        {if (input$cut_bd_by_rodal) {
+          .[] %>% sf::st_intersection(sf::st_union(sf::st_combine(rodales_def())))
+        } else .} %>%
         sf::st_join(rodales_def() %>% dplyr::select(Nom_Predio, N_Rodal, Tipo_fores, Tipo_For, Subtipo_fo, Tipo_veg)) %>%
         dplyr::mutate_at("N_Rodal", as.integer) %>%
         sf::st_drop_geometry() %>%
@@ -637,9 +640,10 @@ app_server <- function(input, output, session) {
     })
   })
 
-  catastro <- reactive({
-    req(predios_def())
-    if (input$add_uso_actual) {
+  catastro <-
+    # reactive({
+    # req(predios_def())
+    # if (input$add_uso_actual) {
       mod_leer_sf_server(
         id = "catastro",
         crs = crs(),
@@ -653,13 +657,14 @@ app_server <- function(input, output, session) {
               )
             )
         },
-        wkt_filter = sf::st_as_text(sf::st_geometry(predios_def() %>% sf::st_union()))
+        wkt_filter = sf::st_as_text(sf::st_geometry(predios_def()))
       )
-    } else {
-      NULL
-    }
-  })
+  #   } else {
+  #     NULL
+  #   }
+  # })
   observeEvent(catastro(),{
+    req(shiny::isTruthy(catastro()))
     check_input(
       x = catastro(),
       names_req = c('USO', 'SUBUSO', 'ESTRUCTURA'),
@@ -668,9 +673,10 @@ app_server <- function(input, output, session) {
     )
   })
 
-  suelos_uso_act <- reactive({
-    req(predios_def())
-    if (input$add_uso_actual) {
+  suelos_uso_act <-
+    # reactive({
+    # req(predios_def())
+    # if (input$add_uso_actual) {
       mod_leer_sf_server(
         id = "suelos_uso_act",
         crs = crs(),
@@ -681,13 +687,14 @@ app_server <- function(input, output, session) {
               ~ "Clase_Uso"
             )
         },
-        wkt_filter = sf::st_as_text(sf::st_geometry(predios_def() %>% sf::st_union()))
+        wkt_filter = sf::st_as_text(sf::st_geometry(predios_def()))
       )
-    } else {
-      NULL
-    }
-  })
+  #   } else {
+  #     NULL
+  #   }
+  # })
   observeEvent(suelos_uso_act(),{
+    req(shiny::isTruthy(suelos_uso_act()))
     check_input(
       x = suelos_uso_act(),
       names_req = c('Clase_Uso'),
@@ -769,7 +776,7 @@ app_server <- function(input, output, session) {
         "Hidrografia_osm",
         "Curvas_niv"
       ) %>%
-        paste0(.,input$NOMPREDIO, sep = "_") %>%
+        paste(.,input$NOMPREDIO, sep = "_") %>%
         subset(
           c(rep(T, 7),
             input$add_parcelas,
@@ -1049,12 +1056,12 @@ app_server <- function(input, output, session) {
       apendice_5_PAS148(
         bd_flora = input$bd_flora,
         rodales = input$rodales_def,
-        tabla_predios = carto$tabla_predios,
-        tabla_areas = carto$tabla_areas,
+        tabla_predios = carto_digital$tabla_predios,
+        tabla_areas = carto_digital$tabla_areas,
         tabla_attr_rodal = tabla_attr_rodal(),
         portada = input$portada,
         provincia = input$provincia,
-        carto_uso_actual = carto$uso_actual,
+        carto_uso_actual = carto_digital$uso_actual,
         obras = obras_ap5(),
         bd_fauna = bd_fauna()
       )
@@ -1062,8 +1069,8 @@ app_server <- function(input, output, session) {
       apendice_5_PAS148(
         bd_flora = input$bd_flora,
         rodales = input$rodales_def,
-        tabla_predios = carto$tabla_predios,
-        tabla_areas = carto$tabla_areas,
+        tabla_predios = carto_digital$tabla_predios,
+        tabla_areas = carto_digital$tabla_areas,
         tabla_attr_rodal = tabla_attr_rodal(),
         portada = input$portada,
         provincia = input$provincia,

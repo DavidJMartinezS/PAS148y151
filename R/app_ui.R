@@ -144,7 +144,7 @@ app_ui <- function(request) {
                   mod_leer_sf_ui("predios", "Ingrese shp de predios") %>%
                     add_help_text(title = "Campos minimos requeridos:\n'N_Predio','Nom_Predio', 'Rol', 'Propietari'"),
                   mod_leer_sf_ui("suelos", "Ingrese shp de suelos") %>%
-                    add_help_text(title = "Campos minimos requeridos:\n'TEXTCAUS'"),
+                    add_help_text(title = "Campos minimos requeridos:\n'Clase_Uso/Clase_Eros'"),
                   shinyWidgets::pickerInput(
                     inputId = "group_by_LB",
                     label = "Agrupar por (Opcional):",
@@ -154,7 +154,7 @@ app_ui <- function(request) {
                   ),
                   shinyWidgets::materialSwitch(
                     inputId = "sep_by_soil",
-                    label = "¿Separar geometrías por CUS?",
+                    label = "¿Separar geometrías por CUS/Erosion?",
                     value = T,
                     status = "success"
                   ),
@@ -263,6 +263,11 @@ app_ui <- function(request) {
                       )
                   ),
                   tags$div(style = "margin-top: -10px"),
+                  shinyWidgets::materialSwitch(
+                    inputId = "cut_bd_by_rodal",
+                    label = "¿Desea seleccionar parcelas en rodales?",
+                    status = "success"
+                  ),
                   shinyWidgets::materialSwitch(
                     inputId = "add_parcelas",
                     label = "¿Crear capa de parcelas?",

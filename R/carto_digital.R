@@ -38,7 +38,7 @@
 #' @importFrom dplyr mutate_if mutate_at mutate select syms case_when filter arrange group_by cur_group_id ungroup count vars rename starts_with tally bind_rows rename_at contains
 #' @importFrom janitor round_half_up
 #' @importFrom sf st_area st_drop_geometry st_as_sf st_join st_crs st_intersection st_collection_extract st_make_valid read_sf st_as_text st_transform st_buffer st_bbox st_as_sfc st_geometry st_union st_crop st_zm st_nearest_feature st_equals st_set_geometry
-#' @importFrom stringi stri_detect_regex stri_extract_all_regex stri_trans_general stri_trans_tolower stri_extract
+#' @importFrom stringi stri_detect_regex stri_extract_all_regex stri_trans_general stri_trans_tolower stri_extract stri_trans_totitle
 #' @importFrom terra crs `crs<-` rast crop minmax as.contour
 #' @importFrom units set_units drop_units
 #' @importFrom purrr map_dfr map2_dbl map_dbl
@@ -229,12 +229,37 @@ cart_predios <- function(predios, dec_sup = 2){
   stopifnot(c("Nom_Predio", "Rol", "Propietari") %in% names(predios) %>% all())
   stopifnot(is.numeric(dec_sup))
 
-  predios %>%
-    dplyr::mutate(
-      Sup_ha = sf::st_area(geometry) %>% units::set_units(ha) %>% units::drop_units() %>% janitor::round_half_up(dec_sup),
-      Fuente = "Elaboración propia"
+  if ("Comuna" %in% names(predios)) {
+    comunas_sf <- sf::read_sf(
+      system.file("Comunas.gdb", package = "dataPAS"),
+      wkt_filter = sf::st_as_text(sf::st_geometry(
+        sf::st_transform(predios %>% sf::st_union(), 5360)
+      ))
     ) %>%
-    dplyr::select(Nom_Predio, Rol, Propietari, Sup_ha)
+      st_set_geometry("geometry") %>%
+      sf::st_transform(sf::st_crs(predios))
+  }
+  return(
+    predios %>%
+      {if("Comuna" %in% names(predios)) {
+        .[] %>%
+          sf::st_intersection(comunas_sf[, "COMUNA"] %>% dplyr::rename_at(1, stringi::stri_trans_totitle)) %>%
+          st_collection_extract("POLYGON")
+      } else . } %>%
+      dplyr::mutate(
+        Sup_ha = sf::st_area(geometry) %>% units::set_units(ha) %>% units::drop_units() %>% janitor::round_half_up(dec_sup),
+        Fuente = "Elaboración propia"
+      ) %>%
+      dplyr::select(Nom_Predio, Rol, Propietari, Sup_ha)
+  )
+
+  if ("Comuna" %in% names(predios)) {
+    warning(
+      paste0(
+        "Campo \"Comuna\" creado a partir de la DPA 2023 (link descarga: ",
+        shQuote("https://www.geoportal.cl/geoportal/catalog/download/912598ad-ac92-35f6-8045-098f214bd9c2"), ")")
+    )
+  }
 }
 
 #' @rdname carto_digital
@@ -876,9 +901,9 @@ get_carto_digital <- function(
     list(
       Areas = carto_area,
       Rodales = carto_rodales,
-      Predios = carto_predios %>% select(-Propietari),
+      Predios = carto_predios %>% dplyr::select(-Propietari),
       Suelos = carto_suelos %>% {if(PAS == 151) select(.,-Clase_Eros) else .},
-      Ran_pend = carto_ran_pend %>% select(-Pend_media),
+      Ran_pend = carto_ran_pend %>% dplyr::select(-Pend_media),
       tabla_predios = tabla_predios,
       tabla_areas = tabla_areas,
       Parcelas = if(add_parcelas) carto_parcelas,
