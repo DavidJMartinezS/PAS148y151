@@ -54,7 +54,7 @@ wb_portada_kimal <- function(wb, PAS, apendice, provincia) {
     wb_merge_cells(dims = wb_dims(rows = 33, cols = 2:5), solve = T) %>%
     wb_add_image(dims = "C35", file = app_sys("app/www/CONEXION.png"), width = 6.5, height = 2, units = 'cm') %>%
     # Fecha
-    wb_add_data(x = paste0(mes,yr, sep = ", "),dims = "C43") %>%
+    wb_add_data(x = paste(mes,yr, sep = ", "),dims = "C43") %>%
     wb_add_cell_style(dims = "C43", horizontal = "center", vertical = "center") %>%
     wb_merge_cells(dims = wb_dims(rows = 43, cols = 3:4), solve = T) %>%
     wb_set_col_widths(cols = 1:6, widths = 13)
@@ -109,7 +109,7 @@ wb_portada_default <- function(wb, PAS, apendice, nom_proj = NULL, provincia){
     wb_merge_cells(dims = wb_dims(rows = 31, cols = 2:5), solve = T) %>%
     wb_add_image(dims = "C33", file = app_sys("app/www/logo_default.png"), width = 135.2899, height = 141.7323, units = 'px', dpi = 72) %>%
     # Fecha
-    wb_add_data(x = paste0(mes,yr, sep = ", "),dims = "C43") %>%
+    wb_add_data(x = paste(mes,yr, sep = ", "),dims = "C43") %>%
     wb_add_cell_style(dims = "C43", horizontal = "center", vertical = "center") %>%
     wb_merge_cells(dims = wb_dims(rows = 43, cols = 3:4), solve = T) %>%
     wb_set_col_widths(cols = 1:6, widths = 13)

@@ -89,7 +89,7 @@ app_ui <- function(request) {
         shinydashboard::sidebarMenu(
           shinydashboard::menuItem("Importante", tabName = "importante", icon = icon("circle-info")),
           shinydashboard::menuItem("Ayuda cartográfica", tabName = "ayuda", icon = icon("circle-check")),
-          shinydashboard::menuItem("Cartografáa y Apéndices", tabName = "carto", icon = icon("layer-group"))
+          shinydashboard::menuItem("Cartografía y Apéndices", tabName = "carto", icon = icon("layer-group"))
         )
       ),
       shinydashboard::dashboardBody(
@@ -130,7 +130,7 @@ app_ui <- function(request) {
           shinydashboard::tabItem(
             tabName = "ayuda",
             fluidRow(
-              col_6(
+              col_4(
                 ## Pred Rod Area ----
                 shinydashboardPlus::box(
                   width = 12,
@@ -191,23 +191,52 @@ app_ui <- function(request) {
                   )
                 )
               ),
-              col_6(
-                shinydashboardPlus::box(
-                  width = 12,
-                  solidHeader = T,
-                  status = "success",
-                  title = "Ayudas cartográficas",
-
-                  ## Ordenar shp ----
-                  mod_st_order_ui("st_order"),
-
-                  ## Chequear cartografia ----
-                  mod_check_carto_ui("check_carto"),
-
-                  ## Agregar pend e hidro
-                  mod_add_attr_ui("add_attr")
-
+              col_8(
+                fluidRow(
+                  shinydashboardPlus::box(
+                    width = 6, solidHeader = T, status = "success",
+                    title = "Ordenar capa",
+                    mod_st_order_ui("st_order")
+                  ),
+                  shinydashboardPlus::box(
+                    width = 6, solidHeader = T, status = "success",
+                    title = "Chequear cartografía",
+                    mod_check_carto_ui("check_carto")
+                  )
+                ),
+                fluidRow(
+                  shinydashboardPlus::box(
+                    width = 6, solidHeader = T, status = "success",
+                    title = "Agregar atributos",
+                    mod_add_attr_ui("add_attr")
+                  ),
+                  shinydashboardPlus::box(
+                    width = 6, solidHeader = T, status = "success",
+                    title = "Crear uso actual",
+                    mod_uso_actual_ui("uso_actual_1")
+                  )
                 )
+
+
+                # shinydashboardPlus::box(
+                #   width = 12,
+                #   solidHeader = T,
+                #   status = "success",
+                #   title = "Ayudas cartográficas",
+                #
+                #   ## Ordenar shp ----
+                #   mod_st_order_ui("st_order"),
+                #
+                #   ## Chequear cartografia ----
+                #   mod_check_carto_ui("check_carto"),
+                #
+                #   ## Agregar pend e hidro ----
+                #   mod_add_attr_ui("add_attr"),
+                #
+                #   ## Crear uso actual ----
+                #   mod_uso_actual_ui("uso_actual_1")
+                #
+                # )
               )
             )
           ),
@@ -231,9 +260,14 @@ app_ui <- function(request) {
                   mod_leer_sf_ui("cart_rodales", "Ingrese shapefile de rodales") %>%
                     add_help_text(title = "Campos minimos requeridos:\n'N_Rodal', 'Tipo_For'"),
                   tags$div(style = "margin-top: -10px"),
-                  tags$div(style = "margin-top: -10px"),
                   mod_leer_sf_ui("cart_predios", "Ingrese shapefile de limites prediales") %>%
                     add_help_text(title = "Campos minimos requeridos:\n'N_Predio', 'Nom_Predio', 'Rol', 'Propietari"),
+                  tags$div(style = "margin-top: -10px"),
+                  shinyWidgets::materialSwitch(
+                    inputId = "pred_cut_by_prov",
+                    label = "¿Cortar predios por provincia?",
+                    status = "success"
+                  ),
                   tags$div(style = "margin-top: -10px"),
                   fileInput(
                     inputId = "dem",
@@ -243,31 +277,43 @@ app_ui <- function(request) {
                     buttonLabel = "Seleccionar",
                     placeholder = "Archivo no seleccionado"
                   ) %>%
-                    add_help_text("Por favor utilizar DEM acotado al área de estudio"),
-                  tags$div(style = "margin-top: -10px"),
+                    add_help_text(title = "Por favor utilizar DEM acotado al área de estudio"),
+                  tags$div(style = "margin-top: -5px"),
                   tags$hr(),
 
                   ### BD Flora ----
+                  fileInput(
+                    inputId = "bd_flora",
+                    label = "Ingresar BD de parcelas (Solo datos de las parcelas que se desean incluir)",
+                    multiple = F,
+                    accept = c(".xlsx"),
+                    buttonLabel = "Seleccionar",
+                    placeholder = "Archivo no seleccionado"
+                  ) %>% add_help_text(
+                    title = "Campos minimos requeridos:\n
+                      'Parcela', 'UTM_E', 'UTM_N', 'Especie', 'N_ind', 'Cob_BB', 'Habito', 'DS_68', 'RCE'"
+                  ),
+                  tags$div(style = "margin-top: -5px"),
                   tags$div(
-                    fileInput(
-                      inputId = "bd_flora",
-                      label = "Ingresar BD de parcelas (Solo datos de las parcelas que se desean incluir)",
-                      multiple = F,
-                      accept = c(".xlsx"),
-                      buttonLabel = "Seleccionar",
-                      placeholder = "Archivo no seleccionado"
-                    ) %>%
-                      add_help_text(
-                        title = "Campos minimos requeridos:\n
-                        'Parcela', 'UTM_E', 'UTM_N', 'Especie', 'Copa_NS', 'Copa_EO', 'Habito'"
-                      )
+                    id = "flex",
+                    shinyWidgets::materialSwitch(
+                      inputId = "cut_bd_by_rodal",
+                      label = "¿Desea seleccionar parcelas en rodales?",
+                      status = "success"
+                    ),
+                    tags$div(
+                      shinyWidgets::actionBttn(
+                        inputId = "check_bd_flora",
+                        label = "Chequear BD",
+                        icon = icon("circle-check"),
+                        style = "gradient",
+                        size = "xs",
+                        color = "success",
+                      ),
+                      style = "margin-left: 30px; margin-top: -3px; vertical-align: middle;"
+                    )
                   ),
-                  tags$div(style = "margin-top: -10px"),
-                  shinyWidgets::materialSwitch(
-                    inputId = "cut_bd_by_rodal",
-                    label = "¿Desea seleccionar parcelas en rodales?",
-                    status = "success"
-                  ),
+                  tags$div(style = "margin-top: 15px"),
                   shinyWidgets::materialSwitch(
                     inputId = "add_parcelas",
                     label = "¿Crear capa de parcelas?",
@@ -358,6 +404,7 @@ app_ui <- function(request) {
                     ),
                     style = "margin-bottom: 10px"
                   ),
+                  ### Apendices 2 y 3 ----
                   tags$h4("Apéndices 2 y 3 (Densidad de especies y ubicación de parcela)", style = "font-weight: bold;"),
                   tags$div(
                     style = "color: #0461b8; font-size: 16px",
@@ -375,6 +422,7 @@ app_ui <- function(request) {
                     status = "success"
                   ),
                   uiOutput("add_bd_pcob_ui"),
+                  uiOutput("add_bd_trans_ui_lgl"),
                   tags$div(style = "margin-top: -5px"),
                   tags$div(
                     id = "flex",
@@ -389,6 +437,9 @@ app_ui <- function(request) {
                     mod_downfiles_ui("down_apendices_3", label = "Apéndice 3", style = "material-flat")
                   ),
                   tags$br(),
+                  tags$hr(style = "height:2px;border-width:0;color:gray;background-color:gray"),
+                  tags$br(),
+                  ### Apendice 5 ----
                   tags$h4("Apéndice 5 - Tablas formulario CONAF", style = "font-weight: bold;"),
                   tags$div(
                     style = "color: #0461b8; font-size: 16px",

@@ -464,7 +464,7 @@ mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inpu
         "Hidrografia_osm",
         "Curvas_niv"
       ) %>%
-        paste0(.,input$NOMPREDIO, sep = "_") %>%
+        paste(.,input$NOMPREDIO, sep = "_") %>%
         subset(
           c(rep(T, 7),
             input$add_parcelas,

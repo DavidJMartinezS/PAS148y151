@@ -116,25 +116,6 @@ get_pred_rod_area <- function(
 
   Rodales <- LB %>%
     dplyr::filter(PID %in% unique(areas$PID)) %>%
-    # {if (PAS == 148){
-    #   .[] %>%
-    #     dplyr::filter(
-    #       Regulacion %>%
-    #         stringi::stri_replace_all_regex("\\s+", " ") %>%
-    #         stringi::stri_trim() %>%
-    #         stringi::stri_cmp_equiv("bosque nativo", strength = 1)
-    #     )
-    # } else {
-    #   .[] %>%
-    #     dplyr::filter(
-    #       Regulacion %>%
-    #         stringi::stri_replace_all_regex("\\s+", " ") %>%
-    #         stringi::stri_trim() %>%
-    #         stringi::stri_cmp_equiv("formacion xerofitica", strength = 1)
-    #     )
-    # }} %>%
-    # sf::st_filter(areas, .predicate = sf::st_relate, pattern = "T********") %>%
-    # {if (is.null(group_by_LB) & !("PID" %in% names(.))) tibble::rowid_to_column(., "PID") else .} %>%
     {if (n_rodal_ord) dplyr::mutate(., N_Rodal = st_order(geometry, order = orden_rodal)) else .} %>%
     my_union(predios %>% dplyr::select(N_Predio, Nom_Predio)) %>%
     sf::st_collection_extract("POLYGON") %>%
@@ -294,7 +275,7 @@ get_pred_rod_area <- function(
     dplyr::rename(N_Predio = N_Predio2) %>%
     dplyr::arrange(N_Predio) %>%
     dplyr::mutate_at(dplyr::vars(Nom_Predio, Rol, Propietari), tidyr::replace_na, "S/I") %>%
-    sf::st_intersection(comunas_sf[, "COMUNA"] %>% dplyr::rename_at(1, stringi::stri_trans_totitle)) %>%
+    sf::st_intersection(comunas_sf[, c("COMUNA", "PROVINCIA")] %>% dplyr::rename_all(stringi::stri_trans_totitle)) %>%
     st_collection_extract("POLYGON") %>%
     mutate(Sup_ha = sf::st_area(geometry) %>% units::set_units(ha) %>% units::drop_units() %>% janitor::round_half_up(2)) %>%
     dplyr::select(N_Predio, Nom_Predio, Rol, Propietari, Comuna, Sup_ha) %>%

@@ -47,7 +47,8 @@ mod_add_attr_ui <- function(id) {
       ),
       mod_downfiles_ui(id = ns("down_sf"), style = "material-flat", label = "Shapefile"),
       mod_downfiles_ui(id = ns("down_xlsx"), style = "material-flat", label = "Excel"),
-    )
+    ),
+    tags$hr(style="height:2px;border-width:0;color:gray;background-color:gray")
   )
 }
 

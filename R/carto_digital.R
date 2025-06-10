@@ -36,7 +36,7 @@
 #'
 #' @import dataPAS
 #' @importFrom dplyr mutate_if mutate_at mutate select syms case_when filter arrange group_by cur_group_id ungroup count vars rename starts_with tally bind_rows rename_at contains
-#' @importFrom janitor round_half_up
+#' @importFrom janitor round_half_up rename_all
 #' @importFrom sf st_area st_drop_geometry st_as_sf st_join st_crs st_intersection st_collection_extract st_make_valid read_sf st_as_text st_transform st_buffer st_bbox st_as_sfc st_geometry st_union st_crop st_zm st_nearest_feature st_equals st_set_geometry
 #' @importFrom stringi stri_detect_regex stri_extract_all_regex stri_trans_general stri_trans_tolower stri_extract stri_trans_totitle
 #' @importFrom terra crs `crs<-` rast crop minmax as.contour
@@ -220,40 +220,55 @@ cart_rang_pend <- function(PAS, areas, dem, dec_sup = 2){
           )
         )
     }} %>%
-    dplyr::select(Nom_Predio, Pend_media, Ran_Pend, Sup_ha)
+    dplyr::select(Nom_Predio, Pend_media, Ran_Pend, Sup_ha, Fuente)
 }
 
 #' @rdname carto_digital
 #' @export
-cart_predios <- function(predios, dec_sup = 2){
+cart_predios <- function(predios, cut_by_prov = NULL, dec_sup = 2){
   stopifnot(c("Nom_Predio", "Rol", "Propietari") %in% names(predios) %>% all())
   stopifnot(is.numeric(dec_sup))
+  if (!is.null(cut_by_prov)) {
+    stopifnot("Solo Provincia" = cut_by_prov %in% unlist(provincias_list) %>% sum() == 1)
+  }
 
-  if ("Comuna" %in% names(predios)) {
+  if (!"Comuna" %in% names(predios) | (!is.null(cut_by_prov) & !"Provincia" %in% names(predios))) {
     comunas_sf <- sf::read_sf(
       system.file("Comunas.gdb", package = "dataPAS"),
       wkt_filter = sf::st_as_text(sf::st_geometry(
         sf::st_transform(predios %>% sf::st_union(), 5360)
       ))
     ) %>%
-      st_set_geometry("geometry") %>%
+      sf::st_set_geometry("geometry") %>%
       sf::st_transform(sf::st_crs(predios))
   }
   return(
     predios %>%
-      {if("Comuna" %in% names(predios)) {
+      {if(!"Comuna" %in% names(predios)) {
         .[] %>%
-          sf::st_intersection(comunas_sf[, "COMUNA"] %>% dplyr::rename_at(1, stringi::stri_trans_totitle)) %>%
-          st_collection_extract("POLYGON")
+          sf::st_intersection(comunas_sf[,c(5:6)] %>% dplyr::rename_all(stringi::stri_trans_totitle)) %>%
+          sf::st_collection_extract("POLYGON")
+      } else . } %>%
+      {if (!is.null(cut_by_prov)) {
+        .[] %>%
+          {if (!"Provincia" %in% names(predios)){
+            .[] %>%
+              dplyr::left_join(
+                comunas_sf[,c(5:6)] %>%
+                  dplyr::rename_all(stringi::stri_trans_totitle) %>%
+                  sf::st_drop_geometry()
+              )
+          } else .} %>%
+          dplyr::filter(Provincia == cut_by_prov)
       } else . } %>%
       dplyr::mutate(
         Sup_ha = sf::st_area(geometry) %>% units::set_units(ha) %>% units::drop_units() %>% janitor::round_half_up(dec_sup),
         Fuente = "Elaboración propia"
       ) %>%
-      dplyr::select(Nom_Predio, Rol, Propietari, Sup_ha)
+      dplyr::select(Nom_Predio, Rol, Propietari, Comuna, Sup_ha, Fuente)
   )
 
-  if ("Comuna" %in% names(predios)) {
+  if (!"Comuna" %in% names(predios)) {
     warning(
       paste0(
         "Campo \"Comuna\" creado a partir de la DPA 2023 (link descarga: ",
@@ -264,7 +279,7 @@ cart_predios <- function(predios, dec_sup = 2){
 
 #' @rdname carto_digital
 #' @export
-cart_parcelas <- function(PAS, bd_flora, rodales){
+cart_parcelas <- function(PAS, bd_flora, rodales, cut_by_rod){
   stopifnot(c("Parcela", "UTM_E", "UTM_E", "N_ind", "Habito", "Cob_BB", "DS_68") %in% names(bd_flora) %>% all())
   stopifnot(c("Nom_Predio", "N_Rodal") %in% names(rodales) %>% all())
   stopifnot(PAS %in% c(148, 151))
@@ -286,7 +301,10 @@ cart_parcelas <- function(PAS, bd_flora, rodales){
     }} %>%
     dplyr::select(-dplyr::matches("Nom_Predio|N_Rodal|Tipo_veg|Tipo_fores|Tipo_For|Subtipo_fo")) %>%
     sf::st_as_sf(coords = c("UTM_E","UTM_N"), crs = sf::st_crs(rodales), remove = F) %>%
-    sf::st_join(rodales %>% dplyr::select(Nom_Predio, N_Rodal, Tipo_fores, Tipo_For, Subtipo_fo, Tipo_veg)) %>%
+    {if(cut_by_rod){
+      .[] %>% sf::st_intersection(sf::st_union(sf::st_combine(rodales)))
+    } else .} %>%
+    sf::st_join(rodales %>% dplyr::select(Nom_Predio, N_Rodal, Tipo_fores, Tipo_For, Subtipo_fo, Tipo_veg), join = st_nearest_feature) %>%
     dplyr::mutate_at("N_Rodal", as.integer) %>%
     sf::st_drop_geometry() %>%
     dplyr::mutate_at("N_ind", as.integer) %>%
@@ -310,7 +328,7 @@ cart_parcelas <- function(PAS, bd_flora, rodales){
 
 #' @rdname carto_digital
 #' @export
-cart_uso_actual <- function(catastro, predios, suelos, dec_sup = 2){
+cart_uso_actual <- function(predios, catastro, suelos, dec_sup = 2){
   stopifnot(c("USO", "SUBUSO", "ESTRUCTURA") %in% names(catastro) %>% all())
   stopifnot(c("Clase_Uso") %in% names(suelos))
   stopifnot(c("Nom_Predio") %in% names(predios))
@@ -757,8 +775,10 @@ get_carto_digital <- function(
     PAS = 148,
     areas,
     rodales,
+    cut_by_rod,
     TipoFor_num = T,
     predios,
+    cut_by_prov,
     dem,
     add_parcelas = F,
     bd_flora = NULL,
@@ -787,7 +807,7 @@ get_carto_digital <- function(
   } else {
     var_suelo <- dplyr::syms(c("Clase_Eros", "Cat_Erosio"))
   }
-  if (nrow(rodales %>% dplyr::count(N_Rodal)) > nrow(areas %>% dplyr::count(N_Rodal))) {
+  if (nrow(rodales %>% dplyr::count(N_Rodal)) > nrow(rodales[areas, ] %>% dplyr::count(N_Rodal))) {
     warning("Sobran rodales")
   }
   if (nrow(predios %>% dplyr::count(N_Predio)) > nrow(predios[areas, ])) {
@@ -812,15 +832,15 @@ get_carto_digital <- function(
 
   carto_ran_pend <- cart_rang_pend(PAS = PAS, areas = areas, dem = dem, dec_sup = dec_sup)
 
-  carto_predios <- cart_predios(predios = predios, dec_sup = dec_sup)
+  carto_predios <- cart_predios(predios = predios, cut_by_prov = cut_by_prov, dec_sup = dec_sup)
 
   if (add_parcelas) {
     stopifnot(!is.null(bd_flora))
-    carto_parcelas <- cart_parcelas(PAS = PAS, bd_flora = bd_flora, rodales = rodales)
+    carto_parcelas <- cart_parcelas(PAS = PAS, bd_flora = bd_flora, rodales = rodales, cut_by_rod = cut_by_rod)
   }
   if (add_uso_actual) {
     stopifnot(!is.null(catastro) & !is.null(suelos))
-    carto_uso_actual <- cart_uso_actual(catastro = catastro, predios = predios, suelos = suelos, dec_sup = dec_sup)
+    carto_uso_actual <- cart_uso_actual(predios = carto_predios, catastro = catastro, suelos = suelos, dec_sup = dec_sup)
   }
   if (add_caminos) {
     stopifnot(!is.null(caminos_arg) & is.list(caminos_arg))

@@ -231,6 +231,9 @@ app_server <- function(input, output, session) {
   ## Agregar pend e hidro ----
   mod_add_attr_server("add_attr", PAS = input$PAS)
 
+  ## Crear uso actual ----
+  mod_uso_actual_server("uso_actua_1", crs = crs(), dec_sup = input$n_dec)
+
   # CARTO y APENDICES ----
   ## Cartografia digital ----
   ### Areas de corta  ----
@@ -548,7 +551,7 @@ app_server <- function(input, output, session) {
         {if (input$cut_bd_by_rodal) {
           .[] %>% sf::st_intersection(sf::st_union(sf::st_combine(rodales_def())))
         } else .} %>%
-        sf::st_join(rodales_def() %>% dplyr::select(Nom_Predio, N_Rodal, Tipo_fores, Tipo_For, Subtipo_fo, Tipo_veg)) %>%
+        sf::st_join(rodales_def() %>% dplyr::select(Nom_Predio, N_Rodal, Tipo_fores, Tipo_For, Subtipo_fo, Tipo_veg), join = st_nearest_feature) %>%
         dplyr::mutate_at("N_Rodal", as.integer) %>%
         sf::st_drop_geometry() %>%
         dplyr::mutate_at("N_ind", as.integer) %>%
@@ -573,7 +576,8 @@ app_server <- function(input, output, session) {
     }
   })
 
-  observeEvent(bd_flora(),{
+  observeEvent(input$check_bd_flora,{
+    req(bd_flora())
     check_bd_flora(x = bd_flora(), shiny = T)
 
     df_ecc <- reactive({
@@ -641,9 +645,9 @@ app_server <- function(input, output, session) {
   })
 
   catastro <-
-    # reactive({
-    # req(predios_def())
-    # if (input$add_uso_actual) {
+    reactive({
+    req(predios_def())
+    if (input$add_uso_actual) {
       mod_leer_sf_server(
         id = "catastro",
         crs = crs(),
@@ -657,26 +661,25 @@ app_server <- function(input, output, session) {
               )
             )
         },
-        wkt_filter = sf::st_as_text(sf::st_geometry(predios_def()))
+        wkt_filter = sf::st_as_text(sf::st_geometry(sf::st_union(predios_def())))
       )
-  #   } else {
-  #     NULL
-  #   }
-  # })
+    } else {
+      NULL
+    }
+  })
   observeEvent(catastro(),{
     req(shiny::isTruthy(catastro()))
     check_input(
       x = catastro(),
       names_req = c('USO', 'SUBUSO', 'ESTRUCTURA'),
-      huso = input$huso,
       id = "catastro-sf_file"
     )
   })
 
   suelos_uso_act <-
-    # reactive({
-    # req(predios_def())
-    # if (input$add_uso_actual) {
+    reactive({
+    req(predios_def())
+    if (input$add_uso_actual) {
       mod_leer_sf_server(
         id = "suelos_uso_act",
         crs = crs(),
@@ -687,18 +690,17 @@ app_server <- function(input, output, session) {
               ~ "Clase_Uso"
             )
         },
-        wkt_filter = sf::st_as_text(sf::st_geometry(predios_def()))
+        wkt_filter = sf::st_as_text(sf::st_geometry(sf::st_union(predios_def())))
       )
-  #   } else {
-  #     NULL
-  #   }
-  # })
+    } else {
+      NULL
+    }
+  })
   observeEvent(suelos_uso_act(),{
     req(shiny::isTruthy(suelos_uso_act()))
     check_input(
       x = suelos_uso_act(),
       names_req = c('Clase_Uso'),
-      huso = input$huso,
       id = "suelos_uso_act-sf_file"
     )
   })
@@ -715,8 +717,10 @@ app_server <- function(input, output, session) {
       PAS = input$PAS,
       areas = areas_def(),
       rodales = rodales_def(),
-      predios = predios_def(),
+      cut_by_rod = input$cut_bd_by_rodal,
       TipoFor_num = T,
+      predios = predios_def(),
+      cut_by_prov = if (input$pred_cut_by_prov) input$provincia else NULL,
       dem = input$dem$datapath,
       add_parcelas = input$add_parcelas,
       bd_flora = bd_flora(),
@@ -872,7 +876,7 @@ app_server <- function(input, output, session) {
   bd_pcob <- reactive({
     if (input$add_bd_pcob) {
       req(input$bd_pcob$datapath)
-      read_xlsx(input$bd_pcob$datapath) %>%
+      openxlsx2::read_xlsx(input$bd_pcob$datapath) %>%
         janitor::clean_names() %>%
         dplyr::rename_all( ~ if_else(
           . == "geometry",.,
@@ -896,6 +900,62 @@ app_server <- function(input, output, session) {
   # observeEvent(bd_pcob(),{
   #   check_bd_pcob(bd_pcob())
   # })
+
+  observeEvent(input$PAS,{
+    output$add_bd_trans_ui_lgl <- renderUI({
+      if(input$PAS == 151){
+        tags$div(
+          shinyWidgets::materialSwitch(
+            inputId = "add_bd_trans",
+            label = "¿Desea incluir transectos?",
+            status = "success"
+          ),
+        uiOutput("add_bd_trans_ui")
+        )
+      }
+    })
+  })
+
+  observeEvent(input$add_bd_trans,{
+    output$add_bd_trans_ui <- renderUI({
+      if(input$add_bd_trans){
+        div(
+          fileInput(
+            inputId = "bd_trans",
+            label = "Ingresar BD de transectos",
+            multiple = F,
+            accept = c(".xlsx"),
+            buttonLabel = "Seleccionar",
+            placeholder = "Archivo no seleccionado"
+          ) %>%
+            add_help_text(
+              title = "Campos minimos requeridos:\n
+              'Campaña', 'Parcela', 'Habito', 'Especie', 'Cuenta', 'Denominador', 'Cobertura'"
+            ),
+          div(style = "margin-top: -10px")
+        )
+      }
+    })
+  })
+
+  bd_trans <- reactive({
+    if (input$add_bd_trans) {
+      req(input$bd_trans$datapath)
+      openxlsx2::read_xlsx(input$bd_trans$datapath) %>%
+        janitor::clean_names() %>%
+        dplyr::rename_all( ~ if_else(
+          . == "geometry",.,
+          stringi::stri_trans_totitle(
+            stringi::stri_trans_general(., "Latin-ASCII"),
+            opts_brkiter = stringi::stri_opts_brkiter(type = "sentence")
+          )
+        )) %>%
+        dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("habito", case_insensitive = T), ~ "Habito") %>%
+        dplyr::mutate_at(dplyr::vars(Cuenta, Denominador, Cobertura), as.numeric)
+    } else {
+      NULL
+    }
+  })
 
   shinyjs::disable("get_apendices_2y3_btn")
   observe({

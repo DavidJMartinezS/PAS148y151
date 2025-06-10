@@ -37,6 +37,7 @@ golem::add_module("apendices", utils = "")
 golem::add_module("bd_flora")
 golem::add_module("tabla_attr_rodal")
 golem::add_module("check_input")
+golem::add_module("uso_actual")
 
 
 usethis::use_pipe(export = T)

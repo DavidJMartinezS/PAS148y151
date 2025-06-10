@@ -39,7 +39,7 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
     }
   } else {
     # Verificar coberturas ----
-    if (!x$Cob_BB %in% c("fp", "r", "+", "1", "2", "3", "4", "5", "---") %>% all()) {
+    if (!x$Cob_BB %in% c("fp", "r", "+", "1", "2", "3", "4", "5", "6", "---") %>% all()) {
       if (shiny) {
         shinyalert::shinyalert(
           title = "Coberturas de Braun-Blanquet que no corresponden",
@@ -47,13 +47,13 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
             "Las coberturas de Braun-Blanquet deben limitarse a las siguientes nomenclaturas:",
             rep_br(1),
             paste0(
-              c("fp", "r", "+", "1", "2", "3", "4", "5", "---") %>% shQuote(),
+              c("fp", "r", "+", "1", "2", "3", "4", "5", "6", "---") %>% shQuote(),
               collapse = ", "
             ),
             rep_br(2),
             "Las siguientes no se reconocen:",
             paste0(
-              setdiff(unique(x$Cob_BB), c("fp", "r", "+", "1", "2", "3", "4", "5", "---")) %>% shQuote(),
+              setdiff(unique(x$Cob_BB), c("fp", "r", "+", "1", "2", "3", "4", "5", "6", "---")) %>% shQuote(),
               collapse = ", "
             )
           ),
@@ -68,12 +68,12 @@ check_bd_flora <- function(x, y = NULL, shiny = F){
           "\033[31mProblemas!","\U0001FAE0","Coberturas de Braun-Blanquet que no corresponden","\n",
           "\033[34mLas coberturas de Braun-Blanquet deben limitarse a las siguientes nomenclaturas:","\n",
           paste0(
-            c("fp", "r", "+", "1", "2", "3", "4", "5", "---") %>% shQuote(),
+            c("fp", "r", "+", "1", "2", "3", "4", "5", "6", "---") %>% shQuote(),
             collapse = ", "
           ),"\n\n",
           "Las siguientes no se reconocen:",
           paste0(
-            setdiff(unique(x$Cob_BB), c("fp", "r", "+", "1", "2", "3", "4", "5", "---")) %>% shQuote(),
+            setdiff(unique(x$Cob_BB), c("fp", "r", "+", "1", "2", "3", "4", "5", "6", "---")) %>% shQuote(),
             collapse = ", "
           )
         )
