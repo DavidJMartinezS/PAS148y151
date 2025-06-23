@@ -12,7 +12,15 @@
 mod_check_carto_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    tags$h3("Chequeo de cartografía"),
+    tags$div(
+      style = "color: #0461b8; font-size: 16px",
+      icon("circle-info"),
+      tags$span(
+        "Lee un shapefile de la cartografia digital, y chequea si tiene los
+        campos y el orden de éstos de acuerdo con los requerimientos técnicos de CONAF."
+      )
+    ),
+    tags$div(style = "margin-top: 10px"),
     mod_leer_sf_ui(ns("sf_check"),"Ingrese Shapefile"),
     tags$div(style = "margin-top: -10px"),
     shinyWidgets::pickerInput(
@@ -38,8 +46,7 @@ mod_check_carto_ui <- function(id) {
       style = "unite",
       size = "sm",
       color = "success"
-    ),
-    tags$hr(style="height:2px;border-width:0;color:gray;background-color:gray")
+    )
   )
 }
 

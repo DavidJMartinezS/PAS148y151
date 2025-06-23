@@ -1,7 +1,7 @@
 #' Tabla atributos de rodal
 #'
 #' @param PAS PAS correspondiente. Ingresar `148` o `151`.
-#' @param parcelas_rodales Base de datos de parcelas dentro de los rodales.
+#' @param bd_flora Base de datos de parcelas dentro de los rodales.
 #' @param rodales_def Objeto sf con poligono de rodales.
 #'
 #' @return Tabla con los atributos de rodal
@@ -12,14 +12,14 @@
 #' @importFrom tidyr complete unnest
 #' @importFrom janitor round_half_up
 #' @importFrom purrr map
-get_tabla_attr_rodal <- function(PAS, parcelas_rodales, rodales_def){
+get_tabla_attr_rodal <- function(PAS, bd_flora, rodales_def){
   stopifnot(PAS %in% c(148, 151))
   stopifnot(inherits(rodales_def, "sf"))
   if (PAS == 148) {
-    stopifnot(c("Nom_Predio", "N_Rodal", "Parcela", "N_Parc", "UTM_E", "UTM_N", "Tipo_fores", "Subtipo_fo", "Tipo_veg", "Especie", "Nha") %in% names(parcelas_rodales) %>% all())
+    stopifnot(c("Nom_Predio", "N_Rodal", "Parcela", "N_Parc", "UTM_E", "UTM_N", "Tipo_fores", "Subtipo_fo", "Tipo_veg", "Especie", "Nha") %in% names(bd_flora) %>% all())
     stopifnot(c("N_Rodal", "Tipo_fores", "Subtipo_fo", "Tipo_veg") %in% names(rodales_def) %>% all())
   } else {
-    stopifnot(c("Nom_Predio", "N_Rodal", "Parcela", "N_Parc", "UTM_E", "UTM_N", "Tipo_veg", "Especie", "Nha") %in% names(parcelas_rodales) %>% all())
+    stopifnot(c("Nom_Predio", "N_Rodal", "Parcela", "N_Parc", "UTM_E", "UTM_N", "Tipo_veg", "Especie", "Nha") %in% names(bd_flora) %>% all())
     stopifnot(c("N_Rodal", "Tipo_veg") %in% names(rodales_def) %>% all())
   }
 
@@ -29,7 +29,7 @@ get_tabla_attr_rodal <- function(PAS, parcelas_rodales, rodales_def){
     dplyr::syms("Tipo_veg")
   }
 
-  nha_parc <- parcelas_rodales %>%
+  nha_parc <- bd_flora %>%
     dplyr::group_by(Nom_Predio, N_Rodal, Parcela, N_Parc, UTM_E, UTM_N, Tipo_veg) %>%
     dplyr::summarise(Nha = sum(Nha,na.rm = T), .groups = "drop") %>%
     dplyr::rename(Coord_X = UTM_E, Coord_Y = UTM_N) %>%
@@ -37,33 +37,36 @@ get_tabla_attr_rodal <- function(PAS, parcelas_rodales, rodales_def){
     dplyr::arrange(N_Parc)
 
   if (any(nha_parc %>% sf::st_distance(rodales_def) %>% apply(1, min) %>% .[] > 5)) {
-    cat(
-      "Los siguientes puntos están a más de 5 metros de los rodales:", "\n",
-      nha_parc[nha_parc %>% sf::st_distance(rodales_def) %>% apply(1, min) %>% .[] > 5, ]$Parcela %>%
+    if (shiny::isRunning()) {
+      shinyalert::shinyalert(
+        title = "OJO!",
+        text = tags$p(
+          "Los siguientes puntos están a más de 5 metros de los rodales:", tags$br(),
+          nha_parc[nha_parc %>% sf::st_distance(rodales_def) %>% apply(1, min) %>% .[] > 5, ]$Parcela %>%
         {if(length(. > 10)) .[c(1:10)] else .} %>%
         shQuote() %>% paste0(collapse = ", ") %>%
-        {if(length(. > 10)) paste0(., ", etc...") else .},
-      "Por favor revisar", "\n"
-    )
-    # shinyalert(
-    #   title = "OJO!",
-    #   text = tags$p(
-    #     "Los siguientes puntos están a más de 5 metros de los rodales:", br(),
-        # nha_parc[nha_parc %>% st_distance(rodales_def) %>% apply(1, min) %>% .[] > 5, ]$Parcela %>%
-        #   {if(length(. > 10)) .[c(1:10)] else .} %>%
-        #   shQuote() %>% paste0(collapse = ", ") %>%
-        #   {if(length(. > 10)) paste0(., ", etc...") else .}, br(),
-    #     "Por favor revisar"
-    #   ),
-    #   type = "warning",
-    #   html = T,
-    #   closeOnEsc = T,
-    #   showConfirmButton = T,
-    #   animation = TRUE
-    # )
+        {if(length(. > 10)) paste0(., ", etc...") else .}, br(),
+          "Por favor revisar"
+        ),
+        type = "warning",
+        html = T,
+        closeOnEsc = T,
+        showConfirmButton = T,
+        animation = TRUE
+      )
+    } else {
+      cat(
+        "Los siguientes puntos están a más de 5 metros de los rodales:", "\n",
+        nha_parc[nha_parc %>% sf::st_distance(rodales_def) %>% apply(1, min) %>% .[] > 5, ]$Parcela %>%
+          {if(length(. > 10)) .[c(1:10)] else .} %>%
+          shQuote() %>% paste0(collapse = ", ") %>%
+          {if(length(. > 10)) paste0(., ", etc...") else .},
+        "Por favor revisar", "\n"
+      )
+    }
   }
 
-  estimaciones_x_tipo <- parcelas_rodales %>%
+  estimaciones_x_tipo <- bd_flora %>%
     dplyr::select(Tipo_veg, N_Parc, Especie, Nha) %>%
     split(.$Tipo_veg) %>%
     purrr::map(~tidyr::complete(.,Tipo_veg, N_Parc, Especie, fill = list(Nha = 0))) %>%

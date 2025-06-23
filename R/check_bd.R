@@ -13,7 +13,8 @@
 #' @importFrom shinybusy notify_success
 #' @importFrom sf st_is st_as_sf st_crs st_intersection st_union st_collection_extract st_drop_geometry
 #' @importFrom dplyr count filter pull
-check_bd_flora <- function(x, y = NULL, shiny = F){
+check_bd_flora <- function(x, y = NULL){
+  shiny <- shiny::isRunning()
   if(!is.null(y) & all(c('UTM_E', 'UTM_N') %in% names(x))){
     if (any(sf::st_is(y, "POLYGON") | sf::st_is(y, "MULTIPOLYGON"))) {
       x <- x %>%

@@ -10,6 +10,7 @@ apendice_2_3(
   PAS,
   bd_flora,
   bd_pcob = NULL,
+  bd_trans = NULL,
   rodales,
   predios,
   portada = "default",

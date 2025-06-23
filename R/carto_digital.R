@@ -35,8 +35,8 @@
 #' @export
 #'
 #' @import dataPAS
-#' @importFrom dplyr mutate_if mutate_at mutate select syms case_when filter arrange group_by cur_group_id ungroup count vars rename starts_with tally bind_rows rename_at contains
-#' @importFrom janitor round_half_up rename_all
+#' @importFrom dplyr mutate_if mutate_at mutate select syms case_when filter arrange group_by cur_group_id ungroup count vars rename starts_with tally bind_rows rename_at contains rename_all
+#' @importFrom janitor round_half_up
 #' @importFrom sf st_area st_drop_geometry st_as_sf st_join st_crs st_intersection st_collection_extract st_make_valid read_sf st_as_text st_transform st_buffer st_bbox st_as_sfc st_geometry st_union st_crop st_zm st_nearest_feature st_equals st_set_geometry
 #' @importFrom stringi stri_detect_regex stri_extract_all_regex stri_trans_general stri_trans_tolower stri_extract stri_trans_totitle
 #' @importFrom terra crs `crs<-` rast crop minmax as.contour
@@ -47,7 +47,7 @@
 #' @importFrom plyr round_any
 cart_rodales <- function(PAS, rodales, TipoFor_num = NULL, from_RCA = F, RCA = NULL, dec_sup = 2){
   stopifnot(c("Nom_Predio", "Tipo_For") %in% names(rodales) %>% all())
-  stopifnot(PAS %in% c(148, 151))
+  PAS <- match.arg(as.character(PAS), choices = c(148, 149, 151))
   stopifnot(is.logical(c(from_RCA, TipoFor_num)))
   stopifnot(is.numeric(dec_sup))
 
@@ -59,6 +59,13 @@ cart_rodales <- function(PAS, rodales, TipoFor_num = NULL, from_RCA = F, RCA = N
       "RCA",
       paste0("RCA N°", RCA %>% stringi::stri_extract_all_regex("\\d+"))
     )
+  )
+
+  tipo_bos <- switch(
+    as.character(PAS),
+    "148" = "BN",
+    "149" = "PL",
+    "No aplica"
   )
 
   if(is.null(TipoFor_num)){
@@ -102,7 +109,7 @@ cart_rodales <- function(PAS, rodales, TipoFor_num = NULL, from_RCA = F, RCA = N
     dplyr::mutate_at("N_Rodal", as.integer) %>%
     dplyr::arrange(N_Rodal) %>%
     dplyr::mutate(
-      Tipo_Bos = ifelse(PAS == 148, "BN", "No aplica"),
+      Tipo_Bos = tipo_bos,
       Sup_ha = sf::st_area(geometry) %>% units::set_units(ha) %>% units::drop_units() %>% janitor::round_half_up(dec_sup),
       Fuente = fuente
     ) %>%
@@ -113,7 +120,7 @@ cart_rodales <- function(PAS, rodales, TipoFor_num = NULL, from_RCA = F, RCA = N
 #' @export
 cart_area <- function(PAS, areas, dec_sup = 2, from_RCA = F, RCA = NULL){
   stopifnot(c("Nom_Predio", "N_Area") %in% names(areas) %>% all())
-  stopifnot(PAS %in% c(148, 151))
+  PAS <- match.arg(as.character(PAS), choices = c(148, 149, 151))
   stopifnot(is.logical(from_RCA))
   stopifnot(is.numeric(dec_sup))
 
@@ -126,9 +133,17 @@ cart_area <- function(PAS, areas, dec_sup = 2, from_RCA = F, RCA = NULL){
       paste0("RCA N°", RCA %>% stringi::stri_extract_all_regex("\\d+"))
     )
   )
+
+  tipo_bos <- switch(
+    as.character(PAS),
+    "148" = "BN",
+    "149" = "PL",
+    "No aplica"
+  )
+
   areas %>%
     dplyr::mutate(
-      Tipo_Bos = ifelse(PAS == 148, "BN", "No aplica"),
+      Tipo_Bos = tipo_bos,
       Sup_ha = sf::st_area(geometry) %>% units::set_units(ha) %>% units::drop_units() %>% janitor::round_half_up(dec_sup),
       Fuente = fuente
     ) %>%
@@ -138,10 +153,10 @@ cart_area <- function(PAS, areas, dec_sup = 2, from_RCA = F, RCA = NULL){
 #' @rdname carto_digital
 #' @export
 cart_suelos <- function(PAS, areas, dec_sup = 2, from_RCA = F, RCA = NULL){
-  stopifnot(PAS %in% c(148, 151))
+  PAS <- match.arg(as.character(PAS), choices = c(148, 149, 151))
   stopifnot(is.logical(from_RCA))
   stopifnot(is.numeric(dec_sup))
-  if (PAS == 148) {
+  if (PAS %in% c(148, 149)) {
     stopifnot(c("Nom_Predio", "Clase_Uso") %in% names(areas) %>% all())
     var_suelo <- dplyr::syms("Clase_Uso")
   }
@@ -180,7 +195,7 @@ cart_suelos <- function(PAS, areas, dec_sup = 2, from_RCA = F, RCA = NULL){
 #' @rdname carto_digital
 #' @export
 cart_rang_pend <- function(PAS, areas, dem, dec_sup = 2){
-  stopifnot(PAS %in% c(148, 151))
+  PAS <- match.arg(as.character(PAS), choices = c(148, 149, 151))
   stopifnot(c("Nom_Predio") %in% names(areas) %>% all())
   stopifnot(is.numeric(dec_sup))
   stopifnot("DEM debe ser un objeto SpatRaster o bien la ruta del archivo" = (class(dem) %in% c("character", "SpatRaster")) %>% any())
@@ -196,7 +211,7 @@ cart_rang_pend <- function(PAS, areas, dem, dec_sup = 2){
       Sup_ha = sf::st_area(geometry) %>% units::set_units(ha) %>% units::drop_units() %>% janitor::round_half_up(dec_sup),
       Fuente = "Elaboración propia"
     ) %>%
-    {if(PAS == 148){
+    {if(PAS %in% c(148, 149)){
       .[] %>%
         dplyr::mutate(
           Ran_Pend = dplyr::case_when(
@@ -226,7 +241,7 @@ cart_rang_pend <- function(PAS, areas, dem, dec_sup = 2){
 #' @rdname carto_digital
 #' @export
 cart_predios <- function(predios, cut_by_prov = NULL, dec_sup = 2){
-  stopifnot(c("Nom_Predio", "Rol", "Propietari") %in% names(predios) %>% all())
+  stopifnot(c("Nom_Predio", "Rol") %in% names(predios) %>% all())
   stopifnot(is.numeric(dec_sup))
   if (!is.null(cut_by_prov)) {
     stopifnot("Solo Provincia" = cut_by_prov %in% unlist(provincias_list) %>% sum() == 1)
@@ -265,7 +280,7 @@ cart_predios <- function(predios, cut_by_prov = NULL, dec_sup = 2){
         Sup_ha = sf::st_area(geometry) %>% units::set_units(ha) %>% units::drop_units() %>% janitor::round_half_up(dec_sup),
         Fuente = "Elaboración propia"
       ) %>%
-      dplyr::select(Nom_Predio, Rol, Propietari, Comuna, Sup_ha, Fuente)
+      dplyr::select(Nom_Predio, Rol, Comuna, Sup_ha, Fuente)
   )
 
   if (!"Comuna" %in% names(predios)) {
@@ -282,7 +297,7 @@ cart_predios <- function(predios, cut_by_prov = NULL, dec_sup = 2){
 cart_parcelas <- function(PAS, bd_flora, rodales, cut_by_rod){
   stopifnot(c("Parcela", "UTM_E", "UTM_E", "N_ind", "Habito", "Cob_BB", "DS_68") %in% names(bd_flora) %>% all())
   stopifnot(c("Nom_Predio", "N_Rodal") %in% names(rodales) %>% all())
-  stopifnot(PAS %in% c(148, 151))
+  PAS <- match.arg(as.character(PAS), choices = c(148, 149, 151))
 
   bd_flora %>%
     mutate_at("N_ind", as.integer) %>%
@@ -302,7 +317,7 @@ cart_parcelas <- function(PAS, bd_flora, rodales, cut_by_rod){
     dplyr::select(-dplyr::matches("Nom_Predio|N_Rodal|Tipo_veg|Tipo_fores|Tipo_For|Subtipo_fo")) %>%
     sf::st_as_sf(coords = c("UTM_E","UTM_N"), crs = sf::st_crs(rodales), remove = F) %>%
     {if(cut_by_rod){
-      .[] %>% sf::st_intersection(sf::st_union(sf::st_combine(rodales)))
+      .[] %>% sf::st_intersection(sf::st_union(rodales))
     } else .} %>%
     sf::st_join(rodales %>% dplyr::select(Nom_Predio, N_Rodal, Tipo_fores, Tipo_For, Subtipo_fo, Tipo_veg), join = st_nearest_feature) %>%
     dplyr::mutate_at("N_Rodal", as.integer) %>%
@@ -370,10 +385,10 @@ cart_uso_actual <- function(predios, catastro, suelos, dec_sup = 2){
 
 #' @rdname carto_digital
 #' @export
-cart_hidro <- function(predios, fuente_hidro, cut = "clip", buffer = 0){
+cart_hidro <- function(predios, fuente_hidro, cut = c("clip", "buffer", "crop", "crop_by_row"), buffer = 0){
   stopifnot(c("Nom_Predio") %in% names(predios) %>% all())
   stopifnot(fuente_hidro %in% c("MOP", "BCN"))
-  stopifnot(cut %in% c("clip", "buffer", "crop", "crop_by_row"))
+  cut <- match.arg(cut)
   stopifnot("buffer must be a number" = is.numeric(buffer))
   if(cut == "clip" & (buffer > 0)){
     buffer <- 0
@@ -457,9 +472,9 @@ cart_hidro <- function(predios, fuente_hidro, cut = "clip", buffer = 0){
 
 #' @rdname carto_digital
 #' @export
-cart_hidro_osm <- function(predios, cut = "clip", buffer = 0){
+cart_hidro_osm <- function(predios, cut = c("clip", "buffer", "crop", "crop_by_row"), buffer = 0){
   stopifnot(c("Nom_Predio") %in% names(predios) %>% all())
-  stopifnot(cut %in% c("clip", "buffer", "crop", "crop_by_row"))
+  cut <- match.arg(cut)
   stopifnot("buffer must be a number" = is.numeric(buffer))
   if(cut == "clip" & (buffer > 0)){
     buffer <- 0
@@ -580,9 +595,9 @@ cart_hidro_osm <- function(predios, cut = "clip", buffer = 0){
 
 #' @rdname carto_digital
 #' @export
-cart_caminos <- function(predios, cut = "clip", buffer = 0){
+cart_caminos <- function(predios, cut = c("clip", "buffer", "crop", "crop_by_row"), buffer = 0){
   stopifnot(c("Nom_Predio") %in% names(predios) %>% all())
-  stopifnot(cut %in% c("clip", "buffer", "crop", "crop_by_row"))
+  cut <- match.arg(cut)
   stopifnot("buffer must be a number" = is.numeric(buffer))
   if(cut == "clip" & (buffer > 0)){
     buffer <- 0
@@ -646,9 +661,9 @@ cart_caminos <- function(predios, cut = "clip", buffer = 0){
 
 #' @rdname carto_digital
 #' @export
-cart_caminos_osm <- function(predios, cut = "clip", buffer = 0){
+cart_caminos_osm <- function(predios, cut = c("clip", "buffer", "crop", "crop_by_row"), buffer = 0){
   stopifnot(c("Nom_Predio") %in% names(predios) %>% all())
-  stopifnot(cut %in% c("clip", "buffer", "crop", "crop_by_row"))
+  cut <- match.arg(cut)
   stopifnot("buffer must be a number" = is.numeric(buffer))
   if(cut == "clip" & (buffer > 0)){
     buffer <- 0
@@ -714,13 +729,13 @@ cart_caminos_osm <- function(predios, cut = "clip", buffer = 0){
 
 #' @rdname carto_digital
 #' @export
-cart_curv_niv <- function(predios, dem, cut = "clip", buffer = 0, step = 10){
+cart_curv_niv <- function(predios, dem, cut = c("clip", "buffer", "crop", "crop_by_row"), buffer = 0, step = 10){
   stopifnot(c("Nom_Predio") %in% names(predios) %>% all())
   stopifnot("DEM debe ser un objeto SpatRaster o bien la ruta del archivo" = (class(dem) %in% c("character", "SpatRaster")) %>% any())
   if (inherits(dem, "character")) {
     stopifnot("ruta del archivo no encontrada" = file.exists(dem))
   }
-  stopifnot(cut %in% c("clip", "buffer", "crop", "crop_by_row"))
+  cut <- match.arg(cut)
   stopifnot("buffer must be a number" = is.numeric(buffer))
   stopifnot("step must be a number greater than or equal to 10" = is.numeric(step) & (step >= 10))
   if(cut == "clip" & (buffer > 0)){
@@ -772,7 +787,7 @@ cart_curv_niv <- function(predios, dem, cut = "clip", buffer = 0, step = 10){
 #' @rdname carto_digital
 #' @export
 get_carto_digital <- function(
-    PAS = 148,
+    PAS,
     areas,
     rodales,
     cut_by_rod,
@@ -799,10 +814,10 @@ get_carto_digital <- function(
     step = 10,
     dec_sup = 2
 ){
-  stopifnot(PAS %in% c(148, 151))
+  PAS <- match.arg(as.character(PAS), choices = c(148, 149, 151))
   stopifnot(c("Nom_Predio", "Tipo_fores", "Tipo_For", "Tipo_veg") %in% names(rodales) %>% all())
   stopifnot(c("N_Predio", "Nom_Predio", "Rol", "Propietari") %in% names(predios) %>% all())
-  if (PAS == 148) {
+  if (PAS %in% c(148, 149)) {
     var_suelo <- dplyr::syms("Clase_Uso")
   } else {
     var_suelo <- dplyr::syms(c("Clase_Eros", "Cat_Erosio"))
@@ -822,7 +837,7 @@ get_carto_digital <- function(
     system.file("Comunas.gdb", package = "dataPAS"),
     wkt_filter = sf::st_as_text(sf::st_geometry(sf::st_union(sf::st_transform(predios, 5360))))
   ) %>%
-    sf::st_transform(sf::st_crs(areas))
+    sf::st_transform(sf::st_crs(predios))
 
   carto_rodales <- cart_rodales(PAS = PAS, rodales = rodales, TipoFor_num = TipoFor_num, dec_sup = dec_sup)
 
@@ -868,23 +883,10 @@ get_carto_digital <- function(
     carto_curv_niv <- cart_curv_niv(predios = predios, dem = dem, cut = curv_niv_arg$cut, buffer = curv_niv_arg$buffer, step = step)
   }
 
-  tabla_predios <- predios %>%
-    dplyr::mutate(Sup_ha = sf::st_area(geometry) %>% units::set_units(ha) %>% units::drop_units() %>% janitor::round_half_up(dec_sup)) %>%
-    dplyr::select(N_Predio, Nom_Predio, Rol, Propietari, Sup_ha) %>%
-    sf::st_intersection(comunas[,4:6]) %>%
-    dplyr::mutate(
-      Sup_ind = sf::st_area(geometry) %>% units::set_units(ha) %>% units::drop_units() %>% janitor::round_half_up(dec_sup),
-      Sup_prop = purrr::map2_dbl(Sup_ind, Sup_ha, ~janitor::round_half_up((.x/.y)*100, dec_sup))
-    ) %>%
+  tabla_predios <- carto_predios %>%
+    sf::st_join(predios %>% select(N_Predio, Propietari), largest = T) %>%
+    dplyr::left_join(comunas[,4:6] %>% st_drop_geometry() %>% rename_all(stringi::stri_trans_totitle)) %>%
     sf::st_drop_geometry() %>%
-    dplyr::filter(Sup_prop > 10) %>%
-    dplyr::group_by(N_Predio, Nom_Predio, Rol, Propietari, Sup_ha) %>%
-    dplyr::summarise(
-      Comuna = paste0(unique(COMUNA), collapse = " - "),
-      Provincia = paste0(unique(PROVINCIA), collapse = " - "),
-      Region = paste0(unique(REGION), collapse = " - "),
-      .groups = "drop"
-    ) %>%
     dplyr::mutate_at(dplyr::vars(Nom_Predio, Propietari), tidyr::replace_na, "S/I") %>%
     dplyr::mutate_at(dplyr::vars(Rol), tidyr::replace_na, "S/R") %>%
     dplyr::arrange(N_Predio)
@@ -921,7 +923,7 @@ get_carto_digital <- function(
     list(
       Areas = carto_area,
       Rodales = carto_rodales,
-      Predios = carto_predios %>% dplyr::select(-Propietari),
+      Predios = carto_predios,
       Suelos = carto_suelos %>% {if(PAS == 151) select(.,-Clase_Eros) else .},
       Ran_pend = carto_ran_pend %>% dplyr::select(-Pend_media),
       tabla_predios = tabla_predios,

@@ -81,13 +81,6 @@ a.carousel-control.right:focus {
   box-shadow: 0px 0px 0px 1px transparent;
 }
 
-#accordion .panel-title{
-  font-size: 1.5em;
-}
-#accordion .panel-collapse .panel-body{
-  font-size: 1.2em;
-}
-
 #logo {
   position: absolute;
   left: 50%;
@@ -119,13 +112,19 @@ a.carousel-control.right:focus {
   display: table-row;
 }
 
+
+#accordion .panel-title{
+  font-size: 1.5em;
+}
+#accordion .panel-collapse .panel-body{
+  font-size: 1.2em;
+}
 /* Estilos para el contenedor principal del accordion */
 #accordion .panel-group {
   border: 1px solid #ddd;
   border-radius: 4px;
   margin-bottom: 20px;
 }
-
 /* Estilos para el encabezado de cada append */
 #accordion .panel-heading a {
   font-size: 1.1em; /* Agrandar la letra */
@@ -137,24 +136,20 @@ a.carousel-control.right:focus {
   text-decoration: none; /* Eliminar subrayado del enlace */
   border-bottom: 1px solid #ddd; /* Borde inferior del encabezado */
 }
-
 /* Estilos para el encabezado cuando está activo (abierto) */
 #accordion .panel-heading a[aria-expanded='true'] {
   background-color: #e0e0e0; /* Un tono ligeramente más oscuro al abrir */
 }
-
 /* Estilos para el cuerpo (contenido) de cada append */
 #accordion .panel-collapse .panel-body {
   padding: 15px;
   border-top: 1px solid #ddd; /* Borde superior del contenido */
 }
-
 /* Estilos para las listas dentro del contenido */
 #accordion .panel-body ul {
   list-style-type: disc; /* Estilo de los puntos de la lista */
   padding-left: 20px;
 }
-
 #accordion .panel-body li {
   margin-bottom: 5px;
   font-size: 1em; /* Tamaño de letra de los items de la lista */

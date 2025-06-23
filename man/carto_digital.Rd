@@ -32,11 +32,11 @@ cart_suelos(PAS, areas, dec_sup = 2, from_RCA = F, RCA = NULL)
 
 cart_rang_pend(PAS, areas, dem, dec_sup = 2)
 
-cart_predios(predios, dec_sup = 2)
+cart_predios(predios, cut_by_prov = NULL, dec_sup = 2)
 
-cart_parcelas(PAS, bd_flora, rodales)
+cart_parcelas(PAS, bd_flora, rodales, cut_by_rod)
 
-cart_uso_actual(catastro, predios, suelos, dec_sup = 2)
+cart_uso_actual(predios, catastro, suelos, dec_sup = 2)
 
 cart_hidro(predios, fuente_hidro, cut = "clip", buffer = 0)
 
@@ -52,8 +52,10 @@ get_carto_digital(
   PAS = 148,
   areas,
   rodales,
+  cut_by_rod,
   TipoFor_num = T,
   predios,
+  cut_by_prov,
   dem,
   add_parcelas = F,
   bd_flora = NULL,

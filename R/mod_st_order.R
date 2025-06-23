@@ -16,8 +16,12 @@
 mod_st_order_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    tags$div(style = "margin-top: -10px"),
-    tags$h3("Ordenar shapefile"),
+    tags$div(
+      style = "color: #0461b8; font-size: 16px",
+      icon("circle-info"),
+      tags$span("Lee un shapefile y crea un campo 'ID_ord' con el orden espacial que indique.")
+    ),
+    tags$div(style = "margin-top: 10px"),
     mod_leer_sf_ui(ns("sf_order"), "Ingrese Shapefile que desea ordenar"),
     tags$div(style = "margin-top: -10px"),
     shinyWidgets::pickerInput(
@@ -45,8 +49,7 @@ mod_st_order_ui <- function(id) {
       ) %>%
         bsplus::bs_embed_tooltip(title = "Crea campo 'ID_ord' con el orden"),
       mod_downfiles_ui(ns("down_sf_ordered"))
-    ),
-    tags$hr(style="height:2px;border-width:0;color:gray;background-color:gray")
+    )
   )
 }
 

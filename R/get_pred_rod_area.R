@@ -27,14 +27,14 @@
 #' @import dataPAS
 #' @importFrom dplyr filter select sym syms mutate mutate_at group_by summarise summarise_at ungroup case_when cur_group_id arrange vars pull rename count across
 #' @importFrom janitor round_half_up
-#' @importFrom sf read_sf st_transform st_crs st_intersection st_union st_combine st_collection_extract st_make_valid st_cast st_area st_filter st_join st_as_text st_geometry
+#' @importFrom sf read_sf st_transform st_crs st_intersection st_union st_collection_extract st_make_valid st_cast st_area st_join st_as_text st_geometry
 #' @importFrom stringi stri_cmp_equiv stri_detect_regex stri_replace_all_regex stri_trim stri_length
 #' @importFrom tibble rowid_to_column
 #' @importFrom tidyr replace_na
 #' @importFrom units set_units drop_units
 
 get_pred_rod_area <- function(
-    PAS,
+    PAS = c(148, 149, 151),
     LB,
     obras,
     predios,
@@ -52,8 +52,14 @@ get_pred_rod_area <- function(
   stopifnot(c(sep_by_soil, group_by_dist, cut_by_prov, n_rodal_ord) %>% is.logical())
   stopifnot(c("Tipo_fores", "Subtipo_fo", "Tipo_veg", "Regulacion") %in% names(LB) %>% all())
   stopifnot(c("N_Predio", "Nom_Predio") %in% names(predios) %>% all())
-  stopifnot(PAS %in% c(148, 151))
-  if (PAS == 148) {
+  PAS <- match.arg(PAS)
+  tipo_bos <- switch(
+    as.character(PAS),
+    "148" = "BN",
+    "149" = "PL",
+    "No aplica"
+  )
+  if (PAS %in% c(148, 149)) {
     stopifnot(c("Clase_Uso") %in% names(suelos) %>% all())
     var_suelo <- dplyr::sym("Clase_Uso")
   } else {
@@ -68,12 +74,18 @@ get_pred_rod_area <- function(
     stopifnot(provincia %in% unlist(provincias_list))
     provincia_sf <- sf::read_sf(system.file("Comunas.gdb", package = "dataPAS")) %>%
       dplyr::filter(PROVINCIA == provincia) %>%
-      sf::st_transform(sf::st_crs(predios))
+      sf::st_transform(sf::st_crs(predios)) %>%
+      sf::st_make_valid() %>%
+      sf::st_collection_extract("POLYGON")
     obras <- obras %>%
-      sf::st_intersection(sf::st_union(sf::st_combine(provincia_sf))) %>%
+      sf::st_intersection(sf::st_union(provincia_sf)) %>%
+      sf::st_collection_extract("POLYGON") %>%
+      sf::st_make_valid() %>%
       sf::st_collection_extract("POLYGON")
     suelos <- suelos %>%
-      sf::st_intersection(sf::st_union(sf::st_combine(provincia_sf))) %>%
+      sf::st_intersection(sf::st_union(provincia_sf)) %>%
+      sf::st_collection_extract("POLYGON") %>%
+      sf::st_make_valid() %>%
       sf::st_collection_extract("POLYGON")
     LB <- LB[provincia_sf, ] %>%
       {if (is.null(group_by_LB) & !("PID" %in% names(.))) tibble::rowid_to_column(., "PID") else .}
@@ -93,7 +105,15 @@ get_pred_rod_area <- function(
             stringi::stri_trim() %>%
             stringi::stri_cmp_equiv("bosque nativo", strength = 1)
         )
-    } else {
+    } else if (PAS == 149){
+      .[] %>%
+        dplyr::filter(
+          Regulacion %>%
+            stringi::stri_replace_all_regex("\\s+", " ") %>%
+            stringi::stri_trim() %>%
+            stringi::stri_cmp_equiv("plantacion forestal", strength = 1)
+        )
+    } else if (PAS == 151) {
       .[] %>%
         dplyr::filter(
           Regulacion %>%
@@ -102,7 +122,7 @@ get_pred_rod_area <- function(
             stringi::stri_cmp_equiv("formacion xerofitica", strength = 1)
         )
     }} %>%
-    sf::st_intersection(sf::st_union(sf::st_combine(obras))) %>%
+    sf::st_intersection(sf::st_union(obras)) %>%
     sf::st_collection_extract("POLYGON") %>%
     sf::st_make_valid() %>%
     sf::st_collection_extract("POLYGON") %>%
@@ -148,7 +168,7 @@ get_pred_rod_area <- function(
       .[] %>% dplyr::group_by(PID) %>% dplyr::mutate(N_Rodal = as.integer(dplyr::cur_group_id())) %>% dplyr::ungroup()
     }} %>%
     dplyr::mutate(
-      Tipo_Bos = ifelse(PAS == 148, "BN", "No aplica"),
+      Tipo_Bos = tipo_bos,
       Tipo_For = dplyr::case_when(
         Tipo_fores %>% stringi::stri_detect_regex("no.*aplica", case_insensitive = T) ~ "No aplica",
         Tipo_fores %>% stringi::stri_detect_regex("alerce", case_insensitive = T) ~ "1",
@@ -216,7 +236,11 @@ get_pred_rod_area <- function(
     dplyr::arrange(N_Predio) %>%
     {if (sep_by_soil) {
       .[] %>%
-        my_union(suelos %>% dplyr::select(!!var_suelo)) %>%
+        st_intersection(suelos %>% dplyr::select(!!var_suelo)) %>%
+        sf::st_collection_extract("POLYGON") %>%
+        sf::st_cast("POLYGON") %>%
+        sf::st_make_valid() %>%
+        sf::st_collection_extract("POLYGON") %>%
         dplyr::group_by(dplyr::across(-geometry)) %>%
         dplyr::tally() %>% dplyr::ungroup() %>%
         sf::st_collection_extract("POLYGON") %>%
@@ -246,25 +270,30 @@ get_pred_rod_area <- function(
       Sup_m2 = sf::st_area(geometry) %>% units::drop_units() %>% janitor::round_half_up()
     ) %>%
     dplyr::group_by(N_Predio) %>%
-    dplyr::mutate(N_r = st_order(geometry)) %>%
-    dplyr::arrange(as.numeric(N_Predio), N_r) %>%
+    dplyr::mutate(sort_by_pred = st_order(geometry)) %>%
+    dplyr::ungroup() %>%
+    dplyr::group_by(N_Rodal) %>%
+    dplyr::mutate(sort_by_rod = st_order(geometry)) %>%
+    dplyr::arrange(as.numeric(N_Rodal), sort_by_rod) %>%
     tibble::rowid_to_column("N_Area") %>%
     dplyr::ungroup() %>%
     dplyr::mutate(
-      Tipo_Bos = ifelse(PAS == 148, "BN", "No aplica"),
-      N_a = paste(N_Predio, stringi::stri_pad_left(N_r, stringi::stri_length(max(N_r)), pad = "0"), sep = ".")
+      Tipo_Bos = tipo_bos,
+      N_a = paste(N_Predio, stringi::stri_pad_left(sort_by_pred, stringi::stri_length(max(sort_by_pred)), pad = "0"), sep = ".")
     ) %>%
     dplyr::select(!!!group_list, Tipo_For, Tipo_veg, Tipo_Bos, N_a, N_Area, N_Pred_ori, !!var_suelo, Sup_ha, Sup_m2) %>%
     suppressWarnings() %>% suppressMessages()
 
   comunas_sf <- sf::read_sf(
     system.file("Comunas.gdb", package = "dataPAS"),
-    wkt_filter = sf::st_as_text(sf::st_geometry(
-      sf::st_transform(BN_areas %>% st_union(), 5360)
-    ))
+    wkt_filter = sf::st_as_text(sf::st_geometry(sf::st_union(
+      sf::st_transform(predios, 5360)
+    )))
   ) %>%
     st_set_geometry("geometry") %>%
-    sf::st_transform(sf::st_crs(BN_areas))
+    sf::st_transform(sf::st_crs(predios)) %>%
+    sf::st_make_valid() %>%
+    sf::st_collection_extract("POLYGON")
 
   Predios <- predios %>%
     dplyr::filter(N_Predio %in% unique(BN_areas$N_Pred_ori)) %>%

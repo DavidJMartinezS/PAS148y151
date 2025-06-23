@@ -9,7 +9,7 @@
 #' @importFrom shinyEffects setShadow
 #' @importFrom shinyWidgets radioGroupButtons dropdownButton prettyRadioButtons pickerInput pickerOptions
 #' @importFrom shinyjs useShinyjs
-#' @importFrom bsplus use_bs_popover use_bs_tooltip
+#' @importFrom bsplus use_bs_popover use_bs_tooltip bs_embed_tooltip
 #' @noRd
 app_ui <- function(request) {
   tagList(
@@ -76,7 +76,7 @@ app_ui <- function(request) {
         ),
         title = tagList(
           tags$span(class = "logo-lg", "PAS 148/151"),
-          tags$img(src = "www/logo_geobiota.png")
+          tags$img(src = "www/favicon.ico", height = "35px")
         ),
         tags$li(
           class = "dropdown",
@@ -90,6 +90,14 @@ app_ui <- function(request) {
           shinydashboard::menuItem("Importante", tabName = "importante", icon = icon("circle-info")),
           shinydashboard::menuItem("Ayuda cartográfica", tabName = "ayuda", icon = icon("circle-check")),
           shinydashboard::menuItem("Cartografía y Apéndices", tabName = "carto", icon = icon("layer-group"))
+        ),
+        tags$footer(
+          tags$img(
+            src = "www/favicon.ico",
+            width = "80%",
+            style = "align: center; display: block; margin-left: auto; margin-right: auto;"
+          ),
+          style = "position: absolute; bottom: 25px"
         )
       ),
       shinydashboard::dashboardBody(
@@ -195,7 +203,7 @@ app_ui <- function(request) {
                 fluidRow(
                   shinydashboardPlus::box(
                     width = 6, solidHeader = T, status = "success",
-                    title = "Ordenar capa",
+                    title = "Ordenar shapefile",
                     mod_st_order_ui("st_order")
                   ),
                   shinydashboardPlus::box(
@@ -216,27 +224,6 @@ app_ui <- function(request) {
                     mod_uso_actual_ui("uso_actual_1")
                   )
                 )
-
-
-                # shinydashboardPlus::box(
-                #   width = 12,
-                #   solidHeader = T,
-                #   status = "success",
-                #   title = "Ayudas cartográficas",
-                #
-                #   ## Ordenar shp ----
-                #   mod_st_order_ui("st_order"),
-                #
-                #   ## Chequear cartografia ----
-                #   mod_check_carto_ui("check_carto"),
-                #
-                #   ## Agregar pend e hidro ----
-                #   mod_add_attr_ui("add_attr"),
-                #
-                #   ## Crear uso actual ----
-                #   mod_uso_actual_ui("uso_actual_1")
-                #
-                # )
               )
             )
           ),
@@ -311,6 +298,11 @@ app_ui <- function(request) {
                         color = "success",
                       ),
                       style = "margin-left: 30px; margin-top: -3px; vertical-align: middle;"
+                    ),
+                    tags$div(
+                      mod_downfiles_ui(id = "down_bd_flora", style = "material-flat", label = "BD flora", size = "xs") %>%
+                        bsplus::bs_embed_tooltip(title = "Descargar BD que se esta considerando"),
+                      style = "margin-left: 30px; margin-top: -3px; vertical-align: middle;"
                     )
                   ),
                   tags$div(style = "margin-top: 15px"),
@@ -320,6 +312,7 @@ app_ui <- function(request) {
                     status = "success"
                   ),
                   tags$div(style = "margin-top: -10px"),
+                  # verbatimTextOutput("bd_flora_asd"),
                   tags$hr(),
 
                   ### Uso actual ----
@@ -377,8 +370,7 @@ app_ui <- function(request) {
                       color = "success"
                     ),
                     mod_downfiles_ui("down_carto"),
-                    mod_downfiles_ui("down_tbl_areas", label = "Tabla planos áreas", style = "material-flat"),
-                    mod_downfiles_ui("down_tbl_predios", label = "Tabla planos predios", style = "material-flat")
+                    mod_downfiles_ui("down_tbl_planos", label = "Tablas planos", style = "material-flat")
                   )
                 )
               ),

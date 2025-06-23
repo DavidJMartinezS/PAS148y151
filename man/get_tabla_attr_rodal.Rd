@@ -4,12 +4,12 @@
 \alias{get_tabla_attr_rodal}
 \title{Tabla atributos de rodal}
 \usage{
-get_tabla_attr_rodal(PAS, parcelas_rodales, rodales_def)
+get_tabla_attr_rodal(PAS, bd_flora, rodales_def)
 }
 \arguments{
 \item{PAS}{PAS correspondiente. Ingresar `148` o `151`.}
 
-\item{parcelas_rodales}{Base de datos de parcelas dentro de los rodales.}
+\item{bd_flora}{Base de datos de parcelas dentro de los rodales.}
 
 \item{rodales_def}{Objeto sf con poligono de rodales.}
 }

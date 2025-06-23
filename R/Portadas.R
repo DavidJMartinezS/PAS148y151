@@ -21,7 +21,7 @@ wb_portada_kimal <- function(wb, PAS, apendice, provincia) {
   yr <- Sys.Date() %>% format('%Y') %>% stringi::stri_trans_totitle(opts_brkiter = stringi::stri_opts_brkiter(type = "sentence"))
 
   nom_apendice <- switch(
-    apendice,
+    as.character(apendice),
     "2" = "APÉNDICE 2. Densiadad de especies",
     "3" = "APÉNDICE 3. Coordenadas ubicación de parcelas",
     "5" = "APÉNDICE 5. Tablas formulario CONAF"
@@ -30,6 +30,8 @@ wb_portada_kimal <- function(wb, PAS, apendice, provincia) {
   wb <- wb %>%
     wb_add_worksheet("Portada", grid_lines = F) %>%
     wb_page_setup(paper_size = 1) %>%
+    # img
+    wb_add_image(dims = "C7", file = app_sys("app/www/logo-header.svg"), width = 7, height = 1.75, units = 'cm') %>%
     # EIA
     wb_add_data(x = "ESTUDIO DE IMPACTO AMBIENTAL", start_col = 2, start_row = 16) %>%
     wb_add_font(dims = "B16", bold = T, size = 14) %>%
@@ -52,7 +54,7 @@ wb_portada_kimal <- function(wb, PAS, apendice, provincia) {
     wb_add_font(dims = "B33", bold = T, size = 14) %>%
     wb_add_cell_style(dims = "B33", horizontal = "center", vertical = "center") %>%
     wb_merge_cells(dims = wb_dims(rows = 33, cols = 2:5), solve = T) %>%
-    wb_add_image(dims = "C35", file = app_sys("app/www/CONEXION.png"), width = 6.5, height = 2, units = 'cm') %>%
+    wb_add_image(dims = "C35", file = app_sys("app/www/CONEXION.png"), width = 5.8, height = 1.79, units = 'cm') %>%
     # Fecha
     wb_add_data(x = paste(mes,yr, sep = ", "),dims = "C43") %>%
     wb_add_cell_style(dims = "C43", horizontal = "center", vertical = "center") %>%
@@ -76,7 +78,7 @@ wb_portada_default <- function(wb, PAS, apendice, nom_proj = NULL, provincia){
   }
 
   nom_apendice <- switch(
-    apendice,
+    as.character(apendice),
     "2" = "APÉNDICE 2. Densiadad de especies",
     "3" = "APÉNDICE 3. Coordenadas ubicación de parcelas",
     "5" = "APÉNDICE 5. Tablas formulario CONAF"
@@ -85,6 +87,8 @@ wb_portada_default <- function(wb, PAS, apendice, nom_proj = NULL, provincia){
   wb <- wb %>%
     wb_add_worksheet("Portada", grid_lines = F) %>%
     wb_page_setup(paper_size = 1) %>%
+    # img
+    wb_add_image(dims = "C7", file = app_sys("app/www/logo-header.svg"), width = 7, height = 1.75, units = 'cm') %>%
     # EIA
     wb_add_data(x = "ESTUDIO DE IMPACTO AMBIENTAL", start_col = 2, start_row = 16) %>%
     wb_add_font(dims = "B16", bold = T, size = 14) %>%

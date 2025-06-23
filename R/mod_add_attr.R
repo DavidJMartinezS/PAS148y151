@@ -19,7 +19,15 @@
 mod_add_attr_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    tags$h3("Agregar Atributos"),
+    tags$div(
+      style = "color: #0461b8; font-size: 16px",
+      icon("circle-info"),
+      tags$span(
+        "Permite agregar los atributos de pendiente y/o de hidrografía a partir
+        de un DEM o una red hidrica"
+      )
+    ),
+    tags$div(style = "margin-top: 10px"),
     mod_leer_sf_ui(ns("sf_to_attr"),"Ingrese Shapefile al cual añadir los atributos"),
     tags$div(style = "margin-top: -10px"),
     shinyWidgets::materialSwitch(
@@ -47,8 +55,7 @@ mod_add_attr_ui <- function(id) {
       ),
       mod_downfiles_ui(id = ns("down_sf"), style = "material-flat", label = "Shapefile"),
       mod_downfiles_ui(id = ns("down_xlsx"), style = "material-flat", label = "Excel"),
-    ),
-    tags$hr(style="height:2px;border-width:0;color:gray;background-color:gray")
+    )
   )
 }
 

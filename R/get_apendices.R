@@ -38,6 +38,7 @@ apendice_2_3 <- function(
     PAS,
     bd_flora,
     bd_pcob = NULL,
+    bd_trans = NULL,
     rodales,
     predios,
     portada = "default",
@@ -48,7 +49,6 @@ apendice_2_3 <- function(
   stopifnot(all(c('Nom_Predio', 'N_Rodal') %in% names(rodales)))
   stopifnot(all(c('N_Predio') %in% names(predios)))
   stopifnot(PAS %in% c(148, 151))
-
   if (is.null(huso)) {
     huso <- ifelse(
       sf::st_crs(rodales)[[2]] %>% stringi::stri_split_regex("\n") %>% .[[1]] %>% .[length(.)] %>% stringi::stri_extract_all_regex("\\d+") == 32719,
@@ -56,10 +56,6 @@ apendice_2_3 <- function(
       "18S"
     )
   }
-
-  bd_flora <- bd_flora %>%
-    dplyr::rename_if(names(.) %>% stringi::stri_trans_general("Latin-ASCII") %>% stringi::stri_cmp_equiv("campana", strength = 1), ~ "Campana")
-
   if(!is.null(bd_pcob)){
     stopifnot(all(c('Parcela', 'Especie', 'Copa_NS', 'Copa_EO') %in% names(bd_pcob)))
   }
@@ -73,36 +69,7 @@ apendice_2_3 <- function(
     dplyr::arrange(N_Parc) %>%
     dplyr::select(Nom_Predio, N_Rodal, Tipo_veg, N_Parc, Coord_X, Coord_Y, Fuente)
 
-  if (PAS == 148) {
-    if (!is.null(bd_pcob)) {
-      df_cob <- bd_pcob %>%
-        dplyr::select(-starts_with("UTM")) %>%
-        dplyr::inner_join(
-          bd_flora %>% dplyr::count(Campana, Parcela, N_Parc, UTM_E, UTM_N) %>% dplyr::select(-n)
-        ) %>%
-        dplyr::mutate(
-          Cob_arb = purrr::map2_dbl(Copa_NS, Copa_EO, cup_coverage, method = "ellipse")
-        ) %>%
-        dplyr::group_by(N_Parc, UTM_E, UTM_N, Especie) %>%
-        dplyr::summarise(
-          Cob_arb = sum(Cob_arb, na.rm = T),
-          Nha = dplyr::n() * 20
-        ) %>%
-        dplyr::group_by(N_Parc) %>%
-        dplyr::mutate(
-          Cob_parc_p = plot_coverage(Cob_arb, percent = T, digits = 1, decimal.mark = ","),
-          Cob_parc = purrr::map_dbl(Cob_parc_p, ~as.numeric(stringi::stri_extract_all_regex(stringi::stri_replace_all_regex(., ",", "\\."),"\\d+\\.\\d"))),
-          Fuente = "PCob"
-        ) %>%
-        dplyr::ungroup() %>%
-        dplyr::mutate_at("Cob_arb", ~janitor::round_half_up(. / 500, 2)) %>%
-        dplyr::select(N_Parc, UTM_E, UTM_N, Especie, Nha, Cob_arb, Cob_parc, Fuente) %>%
-        {if(nrow(.[]) == 0) NULL else .}
-    } else {
-      df_cob <- NULL
-    }
-  }
-
+  ## Preparacion de datos  ----
   df_flora <- bd_flora %>%
     {if (dplyr::count(.[], N_Parc, Especie, sort = T) %>% dplyr::filter(n > 1) %>% nrow() >= 1){
       .[] %>% dplyr::group_by(N_Parc, UTM_E, UTM_N, Especie) %>% dplyr::slice_sample() %>% dplyr::ungroup()
@@ -134,7 +101,8 @@ apendice_2_3 <- function(
           Cob_BB == "5" ~ "50-75",
           Cob_BB == "6" ~ "75-100",
           .default = ""
-        )
+        ),
+        Fuente = "Flora"
       )
     }} %>%
     {if(PAS == 148) {
@@ -147,13 +115,75 @@ apendice_2_3 <- function(
         dplyr::select(N_Parc, UTM_E, UTM_N, Especie, Habito, Nha, Cob_arb)
     }}
 
+
+  if (!is.null(bd_pcob)) {
+    df_pcob <- bd_pcob %>%
+      dplyr::select(-starts_with("UTM")) %>%
+      dplyr::inner_join(
+        bd_flora %>% dplyr::count(Campana, Parcela, N_Parc, UTM_E, UTM_N) %>% dplyr::select(-n)
+      ) %>%
+      dplyr::mutate(
+        Cob_arb = purrr::map2_dbl(Copa_NS, Copa_EO, cup_coverage, method = "ellipse")
+      ) %>%
+      dplyr::group_by(N_Parc, UTM_E, UTM_N, Especie) %>%
+      dplyr::summarise(
+        Cob_arb = sum(Cob_arb, na.rm = T),
+        Nha = dplyr::n() * 20
+      ) %>%
+      dplyr::group_by(N_Parc) %>%
+      dplyr::mutate(
+        Cob_parc_p = plot_coverage(Cob_arb, percent = T, digits = 1, decimal.mark = ","),
+        Cob_parc = purrr::map_dbl(
+          Cob_parc_p,
+          ~as.numeric(stringi::stri_extract_all_regex(stringi::stri_replace_all_regex(., ",", "\\."), "\\d+\\.\\d"))
+        ),
+        Fuente = "PCob"
+      ) %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate_at("Cob_arb", ~janitor::round_half_up(. / 5, 2)) %>%
+      dplyr::select(N_Parc, UTM_E, UTM_N, Especie, Nha, Cob_arb, Cob_parc, Fuente) %>%
+      {if(nrow(.[]) == 0) NULL else .}
+  } else {
+    df_pcob <- NULL
+  }
+
+  if(PAS == 151 & !is.null(bd_trans)) {
+    df_trans <- bd_trans %>%
+      dplyr::filter(
+        Parcela %in% unique(bd_flora$Parcela) &
+        !(Especie %>% stringi::stri_detect_regex("Suelo.*desnudo|identificac|indeter", case_insensitive = T) | is.na(Especie)) &
+        (Habito %>% stringi::stri_detect_regex("arbust", case_insensitive = T) |
+         Habito %>% stringi::stri_detect_regex("sucul", case_insensitive = T))) %>%
+      {if (dplyr::count(.[], Campana, Parcela, Especie, sort = T) %>% dplyr::filter(n > 1) %>% nrow() >= 1){
+        .[] %>% dplyr::group_by(Campana, parcela, Especie) %>% dplyr::slice_sample() %>% dplyr::ungroup()
+      } else .[]} %>%
+      {if (dplyr::anti_join(.[], bd_flora %>% dplyr::count(Campana, Parcela, N_Parc, UTM_E, UTM_N)) %>% nrow() > 0) {
+        warning(
+          "Inconsistencias en las parcelas: ",
+          dplyr::anti_join(.[], bd_flora %>% dplyr::count(Campana, Parcela, N_Parc, UTM_E, UTM_N)) %>%
+            pull(Parcela) %>% unique() %>% shQuote() %>% paste(collapse = " - "),
+          "Se utilizó inner_join en vez de left_join"
+        )
+        .[] %>% dplyr::inner_join(bd_flora %>% dplyr::count(Campana, Parcela, N_Parc, UTM_E, UTM_N) %>% select(-n))
+      } else {
+        .[] %>% dplyr::left_join(bd_flora %>% dplyr::count(Campana, Parcela, N_Parc, UTM_E, UTM_N) %>% select(-n))
+      }} %>%
+      dplyr::rename(Trans_cob = Cobertura) %>%
+      dplyr::mutate_at("Trans_cob", ~janitor::round_half_up(. * 100, 2)) %>%
+      dplyr::select(N_Parc, UTM_E, UTM_N, Especie, Trans_cob) %>%
+      {if(nrow(.[]) == 0) NULL else .}
+  } else {
+    df_trans <- NULL
+  }
+
   flextable::set_flextable_defaults(
     decimal.mark = ",",
     big.mark = "."
   )
 
+  ## Apendice 2 ----
   if (PAS == 148) {
-    ft_2 <- dplyr::bind_rows(df_cob, df_flora) %>%
+    ft_2 <- dplyr::bind_rows(df_flora, df_pcob) %>%
       tidyr::pivot_wider(
         names_from = Fuente,
         values_from = c(Nha, Cob_arb, Cob_parc)
@@ -166,7 +196,7 @@ apendice_2_3 <- function(
           paste0("Coordenadas UTM Datum WGS84 Huso ", huso, "_Coordenada Este"),
           paste0("Coordenadas UTM Datum WGS84 Huso ", huso, "_Coordenada Norte"),
           "Especie",
-          {if(!is.null(df_cob)){
+          {if(!is.null(df_pcob)){
             c("P.COB_NHA\n(árb/ha)",
               "P.COB_Cobertura por especie (%)",
               "P.COB_Cobertura por parcela (%)",
@@ -185,7 +215,7 @@ apendice_2_3 <- function(
       flextable::italic(j = 4) %>%
       flextable::autofit() %>%
       flextable::theme_box() %>%
-      {if(!is.null(df_cob)) {
+      {if(!is.null(df_pcob)) {
         flextable::bg(.,i = ~ `P.COB_Cobertura por parcela (%)` < 10, j = 7, bg = "yellow") %>%
         flextable::bg(i = ~ `FLORA_Cobertura por parcela (%)` < 10, j = 10, bg = "yellow")
       } else {
@@ -196,6 +226,17 @@ apendice_2_3 <- function(
       flextable::bg(bg = "#bcc5d4", part = "header")
   } else {
     ft_2 <- df_flora %>%
+      {if(!is.null(df_pcob)){
+        .[] %>% dplyr::left_join(
+          df_pcob %>%
+            dplyr::select(N_Parc, Especie, Cob_arb) %>% dplyr::rename(Pcob_cob = Cob_arb)
+        )
+      } else .[]} %>%
+      {if(!is.null(df_trans)){
+        .[] %>% dplyr::left_join(
+          df_trans %>% dplyr::select(N_Parc, Especie, Trans_cob)
+        )
+      } else .[]} %>%
       dplyr::arrange(N_Parc, Especie) %>%
       `names<-`(
         c(
@@ -205,7 +246,13 @@ apendice_2_3 <- function(
           "Especie",
           "Hábito",
           "NHA\n(árb/ha)",
-          "Cobertura por especie (%)"
+          "Cobertura (%)",
+          {if(!is.null(df_pcob)){
+            c("Cobertura P.Cob (%)")
+          }},
+          {if(!is.null(df_trans)){
+            c("Cobertura Trans (%)")
+          }}
         )
       ) %>%
       flextable::flextable() %>%
@@ -214,8 +261,17 @@ apendice_2_3 <- function(
       flextable::italic(j = 4) %>%
       flextable::autofit() %>%
       flextable::bg(
-        i = ~`Hábito` %>% stringi::stri_trans_general("Latin-ASCII") %>% stringi::stri_detect_regex("arbol", case_insensitive = T) &
-          `Cobertura por especie (%)` %in% c("10-25", "25-50", "50-75", "75-100"),
+        i = ~ `Hábito` %>%
+          stringi::stri_trans_general("Latin-ASCII") %>%
+          stringi::stri_detect_regex("arbol", case_insensitive = T) &
+          `Cobertura (%)` %in% c("10-25", "25-50", "50-75", "75-100"),
+        j = 7, bg = "yellow"
+      ) %>%
+      flextable::bg(
+        i = ~ `Hábito` %>%
+          stringi::stri_trans_general("Latin-ASCII") %>%
+          stringi::stri_detect_regex("arbol", case_insensitive = T) &
+          `Cobertura P.Cob (%)` >= 10,
         j = 7, bg = "yellow"
       ) %>%
       flextable::theme_box() %>%
@@ -233,6 +289,7 @@ apendice_2_3 <- function(
     openxlsx2::wb_add_worksheet("SP_Nha_y_Cobertura_Parcelas", grid_lines = F) %>%
     flexlsx::wb_add_flextable(sheet = "SP_Nha_y_Cobertura_Parcelas", ft = ft_2, start_col = 1, start_row = 1)
 
+  ## Apendice 3 ----
   ft_3 <- parcelas %>%
     sf::st_join(predios %>% dplyr::select(N_Predio)) %>%
     sf::st_drop_geometry() %>%

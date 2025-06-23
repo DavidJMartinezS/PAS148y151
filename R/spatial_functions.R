@@ -16,7 +16,7 @@
 #' @export
 #'
 #' @importFrom igraph graph_from_adjacency_matrix components
-#' @importFrom sf st_distance st_agr st_difference st_union st_combine st_intersection st_buffer st_centroid st_coordinates st_nearest_feature st_geometry st_point st_sfc st_crs
+#' @importFrom sf st_distance st_agr st_difference st_union st_intersection st_buffer st_centroid st_coordinates st_nearest_feature st_geometry st_point st_sfc st_crs
 #' @importFrom dplyr bind_rows group_by summarise pull mutate slice arrange expr desc
 #' @importFrom terra rast `crs<-` crop terrain extract crs
 #' @importFrom janitor round_half_up
@@ -45,7 +45,7 @@ my_union <- function(x, y) {
     "POINT"
   }
   x %>%
-    sf::st_difference(sf::st_union(sf::st_combine(y))) %>%
+    sf::st_difference(sf::st_union(y)) %>%
     st_collection_extract(geom_type) %>%
     dplyr::bind_rows(
       sf::st_intersection(x, y) %>%

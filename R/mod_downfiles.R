@@ -6,7 +6,7 @@
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList div downloadHandler reactive
+#' @importFrom shiny NS tags downloadHandler reactive observe isTruthy
 #' @importFrom shinyWidgets downloadBttn
 #' @importFrom shinyjs enable disable
 #' @importFrom sf write_sf
@@ -14,20 +14,18 @@
 #' @importFrom purrr map pwalk
 #' @importFrom zip zip
 #'
-mod_downfiles_ui <- function(id, style = "material-circle", icon = "download", ...) {
+mod_downfiles_ui <- function(id, style = "material-circle", icon = "download", size = "sm", color = "success", ...) {
   ns <- NS(id)
-  tagList(
-    div(
-      shinyWidgets::downloadBttn(
-        outputId = ns("downfile"),
-        style = style,
-        size = "sm",
-        color = "success",
-        icon = icon(icon),
-        ...
-      ),
-      style = "margin-left: 15px;"
-    )
+  tags$div(
+    shinyWidgets::downloadBttn(
+      outputId = ns("downfile"),
+      style = style,
+      size = size,
+      color = color,
+      icon = icon(icon),
+      ...
+    ),
+    style = "margin-left: 15px;"
   )
 }
 
@@ -38,7 +36,7 @@ mod_downfiles_server <- function(id, x, name_save){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
     shinyjs::disable("downfile_bttn")
-    observeEvent(x,{shinyjs::enable("downfile_bttn")})
+    observe({if (isTruthy(x)) shinyjs::enable("downfile_bttn")})
 
     filetype <- reactive({
       x %>%
@@ -58,7 +56,7 @@ mod_downfiles_server <- function(id, x, name_save){
     output$downfile <- downloadHandler(
       filename = function() {
         if (length(filetype()) > 1) {
-          paste0("Archivos_comprimidos",".zip")
+          ifelse(is.null(name_save), "Archivos_comprimidos.zip", paste0(names(name_save), ".zip"))
         } else {
           paste0(as.character(name_save), ifelse(filetype() == "sf", ".zip", ".xlsx"))
         }
@@ -73,14 +71,14 @@ mod_downfiles_server <- function(id, x, name_save){
           .f = function(x, y, z) {
             switch(
               y,
-              sf = sf::write_sf(x, paste0(file_path_sans_ext(z), ".shp")),
-              wb = openxlsx2::wb_save(x, paste0(file_path_sans_ext(z), ".xlsx"), overwrite = T),
-              xlsx = writexl::write_xlsx(x, paste0(file_path_sans_ext(z), ".xlsx"))
+              sf = sf::write_sf(x, paste0(tools::file_path_sans_ext(z), ".shp")),
+              wb = openxlsx2::wb_save(x, paste0(tools::file_path_sans_ext(z), ".xlsx"), overwrite = T),
+              xlsx = writexl::write_xlsx(x, paste0(tools::file_path_sans_ext(z), ".xlsx"))
             )
           }
         )
         list_files <- unlist(map(name_save, function(x){list.files(pattern = x)}))
-        if(file_ext(file) == "zip") {
+        if(tools::file_ext(file) == "zip") {
           zip(zipfile = file, files = list_files)
         } else {
           file.copy(from = list_files, to = file, overwrite = T)
