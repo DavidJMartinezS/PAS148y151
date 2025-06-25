@@ -38,18 +38,41 @@ cart_parcelas(PAS, bd_flora, rodales, cut_by_rod)
 
 cart_uso_actual(predios, catastro, suelos, dec_sup = 2)
 
-cart_hidro(predios, fuente_hidro, cut = "clip", buffer = 0)
+cart_hidro(
+  predios,
+  fuente_hidro,
+  cut = c("clip", "buffer", "crop", "crop_by_row"),
+  buffer = 0
+)
 
-cart_hidro_osm(predios, cut = "clip", buffer = 0)
+cart_hidro_osm(
+  predios,
+  cut = c("clip", "buffer", "crop", "crop_by_row"),
+  buffer = 0
+)
 
-cart_caminos(predios, cut = "clip", buffer = 0)
+cart_caminos(
+  predios,
+  cut = c("clip", "buffer", "crop", "crop_by_row"),
+  buffer = 0
+)
 
-cart_caminos_osm(predios, cut = "clip", buffer = 0)
+cart_caminos_osm(
+  predios,
+  cut = c("clip", "buffer", "crop", "crop_by_row"),
+  buffer = 0
+)
 
-cart_curv_niv(predios, dem, cut = "clip", buffer = 0, step = 10)
+cart_curv_niv(
+  predios,
+  dem,
+  cut = c("clip", "buffer", "crop", "crop_by_row"),
+  buffer = 0,
+  step = 10
+)
 
 get_carto_digital(
-  PAS = 148,
+  PAS,
   areas,
   rodales,
   cut_by_rod,

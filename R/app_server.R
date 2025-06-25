@@ -735,7 +735,7 @@ app_server <- function(input, output, session) {
         "Hidrografia",
         "Hidrografia_osm",
         "Curvas_niv"
-      )) %>%
+      ) %>%
         paste(.,input$NOMPREDIO, sep = "_") %>%
         subset(
           c(rep(T, 7),
@@ -747,7 +747,7 @@ app_server <- function(input, output, session) {
             if(input$add_hidro == F) F else input$add_hidro_osm,
             input$add_CN
           )
-        )
+        ))
     )
   })
 
@@ -1109,7 +1109,7 @@ app_server <- function(input, output, session) {
     shinydashboardPlus::dashboardUser(
       name = "David Martínez",
       image = "https://avatars.githubusercontent.com/u/74486319?s=400&u=c277213b232af5e7710bebdc7a50bb9426ab9a62&v=4",
-      title = "Autor Dashboard PAS 148/151",
+      title = "Dashboard PAS 148/151",
       subtitle = "Autor",
       footer = fluidRow(
         tags$p(

@@ -5,7 +5,7 @@
 \title{get_pred_rod_area}
 \usage{
 get_pred_rod_area(
-  PAS,
+  PAS = c(148, 149, 151),
   LB,
   obras,
   predios,

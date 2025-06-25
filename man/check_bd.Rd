@@ -4,7 +4,7 @@
 \alias{check_bd_flora}
 \title{Chequeo Bases de Datos}
 \usage{
-check_bd_flora(x, y = NULL, shiny = F)
+check_bd_flora(x, y = NULL)
 }
 \arguments{
 \item{x}{Base de datos de flora}

@@ -120,7 +120,7 @@ apendice_2_3 <- function(
     df_pcob <- bd_pcob %>%
       dplyr::select(-starts_with("UTM")) %>%
       dplyr::inner_join(
-        bd_flora %>% dplyr::count(Campana, Parcela, N_Parc, UTM_E, UTM_N) %>% dplyr::select(-n)
+        bd_flora %>% dplyr::count(Parcela, N_Parc, UTM_E, UTM_N) %>% dplyr::select(-n)
       ) %>%
       dplyr::mutate(
         Cob_arb = purrr::map2_dbl(Copa_NS, Copa_EO, cup_coverage, method = "ellipse")
@@ -154,19 +154,19 @@ apendice_2_3 <- function(
         !(Especie %>% stringi::stri_detect_regex("Suelo.*desnudo|identificac|indeter", case_insensitive = T) | is.na(Especie)) &
         (Habito %>% stringi::stri_detect_regex("arbust", case_insensitive = T) |
          Habito %>% stringi::stri_detect_regex("sucul", case_insensitive = T))) %>%
-      {if (dplyr::count(.[], Campana, Parcela, Especie, sort = T) %>% dplyr::filter(n > 1) %>% nrow() >= 1){
-        .[] %>% dplyr::group_by(Campana, parcela, Especie) %>% dplyr::slice_sample() %>% dplyr::ungroup()
+      {if (dplyr::count(.[], Parcela, Especie, sort = T) %>% dplyr::filter(n > 1) %>% nrow() >= 1){
+        .[] %>% dplyr::group_by(parcela, Especie) %>% dplyr::slice_sample() %>% dplyr::ungroup()
       } else .[]} %>%
-      {if (dplyr::anti_join(.[], bd_flora %>% dplyr::count(Campana, Parcela, N_Parc, UTM_E, UTM_N)) %>% nrow() > 0) {
+      {if (dplyr::anti_join(.[], bd_flora %>% dplyr::count(Parcela, N_Parc, UTM_E, UTM_N)) %>% nrow() > 0) {
         warning(
           "Inconsistencias en las parcelas: ",
-          dplyr::anti_join(.[], bd_flora %>% dplyr::count(Campana, Parcela, N_Parc, UTM_E, UTM_N)) %>%
+          dplyr::anti_join(.[], bd_flora %>% dplyr::count(Parcela, N_Parc, UTM_E, UTM_N)) %>%
             pull(Parcela) %>% unique() %>% shQuote() %>% paste(collapse = " - "),
           "Se utilizó inner_join en vez de left_join"
         )
-        .[] %>% dplyr::inner_join(bd_flora %>% dplyr::count(Campana, Parcela, N_Parc, UTM_E, UTM_N) %>% select(-n))
+        .[] %>% dplyr::inner_join(bd_flora %>% dplyr::count(Parcela, N_Parc, UTM_E, UTM_N) %>% select(-n))
       } else {
-        .[] %>% dplyr::left_join(bd_flora %>% dplyr::count(Campana, Parcela, N_Parc, UTM_E, UTM_N) %>% select(-n))
+        .[] %>% dplyr::left_join(bd_flora %>% dplyr::count(Parcela, N_Parc, UTM_E, UTM_N) %>% select(-n))
       }} %>%
       dplyr::rename(Trans_cob = Cobertura) %>%
       dplyr::mutate_at("Trans_cob", ~janitor::round_half_up(. * 100, 2)) %>%
@@ -409,7 +409,7 @@ apendice_5_PAS148 <- function(
   # Tabla uso actual ----
   if (!is.null(carto_uso_actual)) {
     tbl_uso_actual <- carto_uso_actual %>%
-      sf::st_join(predios %>% select(N_Predio), largest = T) %>%
+      dplyr::left_join(tabla_predios %>% select(N_Predio, Nom_Predio)) %>%
       sf::st_drop_geometry() %>%
       dplyr::select(N_Predio, Uso_Actual, Sup_ha) %>%
       dplyr::mutate(
@@ -643,7 +643,7 @@ apendice_5_PAS148 <- function(
     flextable::theme_box() %>%
     flextable::valign(part = "header", valign = "center") %>%
     flextable::align(part = "header", align = "center") %>%
-    flextable::merge_h_range(i = ~`Predio N°` == "Total", j1 = "Predio N°", j2 = "Área a reforestar_N°", part = "body") %>%
+    flextable::merge_h_range(i = ~`Predio N°` == "Total", j1 = "Predio N°", j2 = "Área a intervenir_N°", part = "body") %>%
     flextable::align(i = ~`Predio N°` == "Total", j = c(1:2), align = "center") %>%
     flextable::bg(bg = "#bcc5d4", part = "header")
 
@@ -683,33 +683,33 @@ apendice_5_PAS148 <- function(
     wb_add_flextable(sheet = "Resumen", ft = tbl_resumen, start_col = 1, start_row = 1)
 
   # Tabla obras ----
-  if (!is.null(obras)) {
-    tbl_obras <- areas %>%
-      sf::st_intersection(obras %>% dplyr::select(Tipo, Obra)) %>%
-      dplyr::count(Tipo, Obra) %>% dplyr::select(-n) %>%
-      dplyr::mutate(
-        Sup_ha = sf::st_area(geometry) %>% units::set_units(ha) %>% units::drop_units() %>% janitor::round_half_up(2),
-        Sup_m2 = sf::st_area(geometry) %>% units::drop_units() %>% janitor::round_half_up(),
-      ) %>%
-      sf::st_drop_geometry() %>%
-      janitor::adorn_totals() %>%
-      `names<-`(c("Temporalidad de la obra", "Obra", "Superficie (ha)", "Superficie (m2)")) %>%
-      flextable::flextable() %>%
-      flextable::separate_header(split = "_") %>%
-      flextable::autofit() %>%
-      flextable::merge_v(j = c(1)) %>%
-      flextable::merge_h_range(i = ~ `Temporalidad de la obra` == "Total", j1 = "Temporalidad de la obra", j2 = "Obra", part = "body") %>%
-      flextable::theme_box() %>%
-      ftExtra::colformat_md() %>%
-      flextable::valign(part = "header", valign = "center") %>%
-      flextable::align(part = "header", align = "center") %>%
-      flextable::align(i = ~ `Temporalidad de la obra` == "Total", align = "center", j = c(1:2), part = "body") %>%
-      flextable::bg(bg = "#bcc5d4", part = "header")
-
-    wb_ap5 <- wb_ap5 %>%
-      wb_add_worksheet("Obras", grid_lines = F) %>%
-      wb_add_flextable(sheet = "Obras", ft = tbl_obras, start_col = 1, start_row = 1)
-  }
+  # if (!is.null(obras)) {
+  #   tbl_obras <- areas %>%
+  #     sf::st_intersection(obras %>% dplyr::select(Tipo, Obra)) %>%
+  #     dplyr::count(Tipo, Obra) %>% dplyr::select(-n) %>%
+  #     dplyr::mutate(
+  #       Sup_ha = sf::st_area(geometry) %>% units::set_units(ha) %>% units::drop_units() %>% janitor::round_half_up(2),
+  #       Sup_m2 = sf::st_area(geometry) %>% units::drop_units() %>% janitor::round_half_up(),
+  #     ) %>%
+  #     sf::st_drop_geometry() %>%
+  #     janitor::adorn_totals() %>%
+  #     `names<-`(c("Temporalidad de la obra", "Obra", "Superficie (ha)", "Superficie (m2)")) %>%
+  #     flextable::flextable() %>%
+  #     flextable::separate_header(split = "_") %>%
+  #     flextable::autofit() %>%
+  #     flextable::merge_v(j = c(1)) %>%
+  #     flextable::merge_h_range(i = ~ `Temporalidad de la obra` == "Total", j1 = "Temporalidad de la obra", j2 = "Obra", part = "body") %>%
+  #     flextable::theme_box() %>%
+  #     ftExtra::colformat_md() %>%
+  #     flextable::valign(part = "header", valign = "center") %>%
+  #     flextable::align(part = "header", align = "center") %>%
+  #     flextable::align(i = ~ `Temporalidad de la obra` == "Total", align = "center", j = c(1:2), part = "body") %>%
+  #     flextable::bg(bg = "#bcc5d4", part = "header")
+  #
+  #   wb_ap5 <- wb_ap5 %>%
+  #     wb_add_worksheet("Obras", grid_lines = F) %>%
+  #     wb_add_flextable(sheet = "Obras", ft = tbl_obras, start_col = 1, start_row = 1)
+  # }
 
   # Tabla estadisticos ----
   tbl_est <- bd_flora %>%
@@ -719,7 +719,7 @@ apendice_5_PAS148 <- function(
       Promedio = mean(Nha, na.rm = T) %>% janitor::round_half_up(),
       n = n(),
       Rango = paste0(min(Nha)," - ", max(Nha)),
-      cuasivarianza = ((1-(n*(500/10000)/(Rodales$Sup_ha %>% sum())))*(sd(Nha)^2/n))%>% janitor::round_half_up(2),
+      cuasivarianza = ((1-(n*(500/10000)/(rodales$Sup_ha %>% sum())))*(sd(Nha)^2/n))%>% janitor::round_half_up(2),
       CV = ((sqrt(cuasivarianza)/Promedio)*100) %>% janitor::round_half_up(1),
       T_est = qt(0.975,n-1) %>% janitor::round_half_up(3),
       E_abs = (T_est * sqrt(cuasivarianza)) %>% janitor::round_half_up(),
@@ -739,22 +739,24 @@ apendice_5_PAS148 <- function(
     openxlsx2::wb_set_col_widths(cols = seq_len(ncol(tbl_est)), width = "auto")
 
   # Tabla fauna ----
-  if (!is.null(bd_fauna)) {
-    tbl_fauna <- bd_fauna %>%
-      dplyr::filter(Nombre_cientifico != "Sin registro", Categoria != "-") %>%
-      dplyr::select(Nombre_cientifico, dplyr::matches("utm_"), Categoria, Decreto) %>%
-      sf::st_as_sf(coords = c("UTM_E","UTM_N"), crs = sf::st_crs(predios), remove = F) %>%
-      sf::st_intersection(predios %>% dplyr::select(N_Predio)) %>%
-      sf::st_drop_geometry() %>%
-      dplyr::count(N_Predio, Nombre_cientifico, Categoria, Decreto)
-
-    wb_ap5 <- wb_ap5 %>%
-      openxlsx2::wb_add_worksheet("BD_Fauna") %>%
-      openxlsx2::wb_add_data(sheet = "BD_Fauna", x = tbl_fauna, start_col = 1, start_row = 1) %>%
-      openxlsx2::wb_set_cell_style(dims = openxlsx2::wb_dims(x = tbl_fauna, select = "col_names"), style = wb_ap5$styles_mgr$get_xf_id("header_cellxfs")) %>%
-      openxlsx2::wb_add_border(dims = openxlsx2::wb_dims(x = tbl_fauna, select = "data"), inner_hgrid = "thin", inner_vgrid = "thin") %>%
-      openxlsx2::wb_set_col_widths(cols = seq_len(ncol(tbl_fauna)), width = "auto")
-  }
+  # if (!is.null(bd_fauna)) {
+  #   tbl_fauna <- bd_fauna %>%
+  #     dplyr::filter(Nombre_cientifico != "Sin registro", Categoria != "-") %>%
+  #     dplyr::select(Nombre_cientifico, dplyr::matches("utm_"), Categoria, Decreto) %>%
+  #     dplyr::mutate_at(dplyr::vars(dplyr::starts_with("UTM")), as.numeric) %>%
+  #     tidyr::drop_na(UTM_E, UTM_N) %>%
+  #     sf::st_as_sf(coords = c("UTM_E","UTM_N"), crs = sf::st_crs(rodales), remove = F) %>%
+  #     sf::st_intersection(predios %>% dplyr::select(N_Predio)) %>%
+  #     sf::st_drop_geometry() %>%
+  #     dplyr::count(N_Predio, Nombre_cientifico, Categoria, Decreto)
+  #
+  #   wb_ap5 <- wb_ap5 %>%
+  #     openxlsx2::wb_add_worksheet("BD_Fauna") %>%
+  #     openxlsx2::wb_add_data(sheet = "BD_Fauna", x = tbl_fauna, start_col = 1, start_row = 1) %>%
+  #     openxlsx2::wb_set_cell_style(dims = openxlsx2::wb_dims(x = tbl_fauna, select = "col_names"), style = wb_ap5$styles_mgr$get_xf_id("header_cellxfs")) %>%
+  #     openxlsx2::wb_add_border(dims = openxlsx2::wb_dims(x = tbl_fauna, select = "data"), inner_hgrid = "thin", inner_vgrid = "thin") %>%
+  #     openxlsx2::wb_set_col_widths(cols = seq_len(ncol(tbl_fauna)), width = "auto")
+  # }
   return(wb_ap5)
 }
 

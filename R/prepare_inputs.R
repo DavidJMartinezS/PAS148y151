@@ -62,7 +62,7 @@ prepare_bd_flora <- function(BD, rodales, PAS, cut_by_rod) {
           !N_ind %in% c(NA, 0)
         )
     }} %>%
-    dplyr::select(-dplyr::matches("Nom_Predio|N_Rodal|Tipo_veg|Tipo_fores|Tipo_For|Subtipo_fo")) %>%
+    dplyr::select(-dplyr::matches("N_Parc|Nom_Predio|N_Rodal|Tipo_veg|Tipo_fores|Tipo_For|Subtipo_fo")) %>%
     sf::st_as_sf(coords = c("UTM_E","UTM_N"), crs = sf::st_crs(rodales), remove = F) %>%
     {if (cut_by_rod) {
       .[] %>% sf::st_intersection(sf::st_union(rodales))
@@ -119,7 +119,7 @@ prepare_bd_trans <- function(BD) {
 
   if (inherits(BD, "data.frame")) BD else openxlsx2::read_xlsx(BD) %>%
     janitor::clean_names() %>%
-    dplyr::rename_all( ~ if_else(
+    dplyr::rename_all( ~ ifelse(
       . == "geometry",.,
       stringi::stri_trans_totitle(
         stringi::stri_trans_general(., "Latin-ASCII"),

@@ -82,7 +82,7 @@ get_tabla_attr_rodal <- function(PAS, bd_flora, rodales_def){
 
   df <- rodales_def %>%
     dplyr::count(N_Rodal, !!!vars_tbl_attr) %>% dplyr::select(-n) %>%
-    sf::st_join(nha_parc %>% dplyr::select(N_Parc, Nha))
+    sf::st_join(nha_parc %>% dplyr::select(N_Parc, Nha), join = st_nearest_feature)
 
   tabla_attr_rodal <- df %>%
     dplyr::bind_rows(
@@ -104,7 +104,7 @@ get_tabla_attr_rodal <- function(PAS, bd_flora, rodales_def){
     ) %>%
     dplyr::group_by(N_Rodal, !!!vars_tbl_attr, geometry) %>%
     dplyr::summarise(
-      Parcelas = paste0(N_Parc, collapse = '-'),
+      Parcelas = paste(N_Parc, collapse = '-'),
       NHA = mean(Nha, na.rm=T),
       .groups = "drop"
     ) %>%

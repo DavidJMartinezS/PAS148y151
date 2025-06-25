@@ -56,7 +56,7 @@ mod_downfiles_server <- function(id, x, name_save){
     output$downfile <- downloadHandler(
       filename = function() {
         if (length(filetype()) > 1) {
-          ifelse(is.null(name_save), "Archivos_comprimidos.zip", paste0(names(name_save), ".zip"))
+          ifelse(is.null(names(name_save)), "Archivos_comprimidos.zip", paste0(names(name_save), ".zip"))
         } else {
           paste0(as.character(name_save), ifelse(filetype() == "sf", ".zip", ".xlsx"))
         }
@@ -67,7 +67,11 @@ mod_downfiles_server <- function(id, x, name_save){
         setwd(temp_dir)
         file.remove(list.files(pattern = "\\."))
         pwalk(
-          if(length(filetype()) == 1) list(list(x), list(filetype()), list(name_save)) else list(x, filetype(), name_save),
+          if(length(filetype()) == 1) {
+            list(list(x), list(filetype()), ifelse(inherits(name_save, "list"), name_save, list(name_save)))
+          } else {
+            list(x, filetype(), unlist(name_save))
+          },
           .f = function(x, y, z) {
             switch(
               y,
@@ -77,7 +81,7 @@ mod_downfiles_server <- function(id, x, name_save){
             )
           }
         )
-        list_files <- unlist(map(name_save, function(x){list.files(pattern = x)}))
+        list_files <- unname(unlist(map(unlist(name_save), function(x){list.files(pattern = x)})))
         if(tools::file_ext(file) == "zip") {
           zip(zipfile = file, files = list_files)
         } else {

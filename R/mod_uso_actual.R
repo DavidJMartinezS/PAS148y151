@@ -63,10 +63,10 @@ mod_uso_actual_server <- function(id, crs, dec_sup){
       id = "predios",
       crs = crs
     )
-    catastro <- eventReactive(predios(), {
+    catastro <- eventReactive(predios(),{
       mod_leer_sf_server(
         id = "catastro",
-        crs = crs,
+        crs = crs(),
         fx = function(x){
           x %>%
             dplyr::rename_all(
@@ -81,10 +81,19 @@ mod_uso_actual_server <- function(id, crs, dec_sup){
       )
     })
 
+    observeEvent(catastro(),{
+      req(shiny::isTruthy(catastro()))
+      check_input(
+        x = catastro(),
+        names_req = c('USO', 'SUBUSO', 'ESTRUCTURA'),
+        id = "catastro-sf_file"
+      )
+    })
+
     suelos <- eventReactive(predios(), {
       mod_leer_sf_server(
         id = "suelos",
-        crs = crs,
+        crs = crs(),
         fx = function(x){
           x %>%
             dplyr::rename_if(
@@ -93,6 +102,15 @@ mod_uso_actual_server <- function(id, crs, dec_sup){
             )
         },
         wkt_filter = sf::st_as_text(sf::st_geometry(sf::st_union(predios())))
+      )
+    })
+
+    observeEvent(suelos(),{
+      req(shiny::isTruthy(suelos()))
+      check_input(
+        x = suelos(),
+        names_req = c('Clase_Uso'),
+        id = "suelos-sf_file"
       )
     })
 
