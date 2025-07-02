@@ -57,14 +57,12 @@ plot_coverage <- function(x, plot_size = 500, percent = F, digits = 1, ...){
 #' @return Mismo texto con `*` para dar formato cursiva.
 #' @export
 #'
-#' @importFrom purrr map2_chr
-#' @importFrom stringi stri_split_fixed
-#'
 #' @examples
 #' italic_sp(x = c(
 #' "Bosque de Schinus latifolius-Quillaja saponaria",
 #' "Matorral con suculentas de Flourensia thurifera",
 #' "Plantación de especies nativas de Acacia caven-Quillaja saponaria"))
+#' @importFrom utils tail
 italic_sp <- function(x){
   split_de <- function(texto, patron){
     if (is.na(texto)) {
@@ -109,15 +107,16 @@ italic_sp <- function(x){
 #' @return data.frame con densidad (ind/ha) por especie.
 #' @export
 #'
+#' @importFrom dplyr count
 nha_x_sp_fun <- function(parcelas, bd, add_var = NULL){
   bd %>%
-    select(N_Parc, Especie, Nha) %>%
-    filter(N_Parc %in% parcelas) %>%
-    complete(N_Parc, Especie, fill = list(Nha = 0)) %>%
-    left_join(bd %>% count(Especie, across(add_var)) %>% select(-n)) %>%
-    group_by(Especie, across(add_var)) %>%
-    summarise(Nha = mean(Nha,na.rm = T) %>% round_half_up(), .groups = "drop") %>%
-    mutate_at("Nha", as.integer) %>%
+    dplyr::select(N_Parc, Especie, Nha) %>%
+    dplyr::filter(N_Parc %in% parcelas) %>%
+    tidyr::complete(N_Parc, Especie, fill = list(Nha = 0)) %>%
+    dplyr::left_join(bd %>% count(Especie, dplyr::across(add_var)) %>% dplyr::select(-n)) %>%
+    dplyr::group_by(Especie, dplyr::across(add_var)) %>%
+    dplyr::summarise(Nha = mean(Nha,na.rm = T) %>% janitor::round_half_up(), .groups = "drop") %>%
+    dplyr::mutate_at("Nha", as.integer) %>%
     suppressMessages() %>% suppressWarnings()
 }
 
@@ -128,7 +127,7 @@ nha_x_sp_fun <- function(parcelas, bd, add_var = NULL){
 #'
 #' @return data.frame con cobertura de copas por especie.
 #' @export
-#' @importFrom dplyr select filter mutate case_match group_by summarise
+#'
 cob_x_sp_fun <- function(parcelas, bd_flora){
   bd_flora %>%
     dplyr::select(N_Parc, Especie, Habito, Cob_BB) %>%

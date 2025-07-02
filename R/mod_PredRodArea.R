@@ -6,14 +6,7 @@
 #'
 #' @noRd
 #'
-#' @importFrom sf st_drop_geometry
-#' @importFrom dplyr rename_all rename_if group_by summarise_at filter count
-#' @importFrom shiny NS tagList renderUI reactive observe observeEvent uiOutput renderUI eventReactive req tags
-#' @importFrom shinyWidgets pickerInput materialSwitch actionBttn numericInputIcon updatePickerInput
-#' @importFrom stringi stri_trans_general stri_cmp_equiv stri_detect_regex stri_trans_totitle stri_opts_brkiter
-#' @importFrom shinyjs reset disable enable
-#' @importFrom shinybusy notify_warning show_modal_spinner remove_modal_spinner report_warning
-#'
+#' @importFrom shiny NS tagList uiOutput
 mod_PredRodArea_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -74,6 +67,7 @@ mod_PredRodArea_ui <- function(id) {
 #' PredRodArea Server Functions
 #'
 #' @noRd
+#' @importFrom shiny eventReactive icon moduleServer observe observeEvent reactive renderUI req
 mod_PredRodArea_server <- function(id, crs, dec_sup, provincia, PAS, huso){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

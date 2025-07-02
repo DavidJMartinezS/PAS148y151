@@ -5,8 +5,38 @@
 #' @inheritParams shiny::shinyApp
 #'
 #' @export
-#' @importFrom shiny shinyApp
 #' @importFrom golem with_golem_options
+#' @importFrom shiny shinyApp
+#' @importFrom bsplus
+#' @importFrom dplyr
+#' @importFrom shinyjs
+#' @importFrom flexlsx
+#' @importFrom flextable
+#' @importFrom fresh
+#' @importFrom ftExtra
+#' @importFrom igraph
+#' @importFrom janitor
+#' @importFrom openxlsx2
+#' @importFrom osmdata
+#' @importFrom plyr
+#' @importFrom purrr
+#' @importFrom sf
+#' @importFrom shinyalert
+#' @importFrom shinybusy
+#' @importFrom shinydashboard
+#' @importFrom shinydashboardPlus
+#' @importFrom shinyEffects
+#' @importFrom shinyjs
+#' @importFrom shinyWidgets
+#' @importFrom stats
+#' @importFrom stringi
+#' @importFrom terra
+#' @importFrom tibble
+#' @importFrom tidyr
+#' @importFrom tools
+#' @importFrom units
+#' @importFrom zip
+#'
 run_app <- function(
   onStart = NULL,
   options = list(),

@@ -2,15 +2,8 @@
 #'
 #' @param request Internal parameter for `{shiny}`.
 #'     DO NOT REMOVE.
-#' @importFrom fresh use_theme
-#' @importFrom shiny tagList tags numericInput HTML fluidRow column
-#' @importFrom shinydashboard sidebarMenu menuItem tabItems tabItem
-#' @importFrom shinydashboardPlus dashboardPage dashboardHeader userOutput dashboardSidebar box
-#' @importFrom shinyEffects setShadow
-#' @importFrom shinyWidgets radioGroupButtons dropdownButton prettyRadioButtons pickerInput pickerOptions
-#' @importFrom shinyjs useShinyjs
-#' @importFrom bsplus use_bs_popover use_bs_tooltip bs_embed_tooltip
 #' @noRd
+#' @importFrom shiny column fileInput fluidRow icon numericInput tagList textInput uiOutput
 app_ui <- function(request) {
   tagList(
     # Leave this function for adding external resources
@@ -283,9 +276,16 @@ app_ui <- function(request) {
                   tags$div(style = "margin-top: -5px"),
                   tags$div(
                     id = "flex",
-                    shinyWidgets::materialSwitch(
+                    shinyWidgets::awesomeCheckbox(
                       inputId = "cut_bd_by_rodal",
-                      label = "¿Desea seleccionar parcelas en rodales?",
+                      label = "Seleccionar parcelas en rodales",
+                      status = "success"
+                    ),
+                    tags$div(style = "margin-left: 20px"),
+                    shinyWidgets::awesomeCheckbox(
+                      inputId = "include_fp",
+                      label = "Incluir fp, --- & NA",
+                      value = FALSE,
                       status = "success"
                     ),
                     tags$div(
@@ -297,7 +297,7 @@ app_ui <- function(request) {
                         size = "xs",
                         color = "success",
                       ),
-                      style = "margin-left: 30px; margin-top: -3px; vertical-align: middle;"
+                      style = "margin-left: 20px; margin-top: -3px; vertical-align: middle;"
                     ),
                     tags$div(
                       mod_downfiles_ui(id = "down_bd_flora", style = "material-flat", label = "BD flora", size = "xs") %>%
@@ -495,7 +495,7 @@ app_ui <- function(request) {
 #' resources inside the Shiny application.
 #'
 #' @import shiny
-#' @importFrom golem add_resource_path activate_js favicon bundle_resources
+#' @importFrom golem add_resource_path bundle_resources favicon
 #' @noRd
 golem_add_external_resources <- function() {
   add_resource_path(

@@ -4,7 +4,7 @@
 \alias{prepare_bd_flora}
 \title{Prepare inputs}
 \usage{
-prepare_bd_flora(BD, rodales, PAS, cut_by_rod)
+prepare_bd_flora(BD, rodales, PAS, cut_by_rod, include_fp = F)
 }
 \arguments{
 \item{BD}{data.frame o ruta con la base de datos}

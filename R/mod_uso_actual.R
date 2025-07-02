@@ -6,16 +6,7 @@
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList tags eventReactive reactive req observeEvent
-#' @importFrom shinyWidgets actionBttn
-#' @importFrom dplyr rename rename_all rename_if select mutate case_when group_by summarise matches starts_with
-#' @importFrom stringi stri_trans_toupper stri_trans_general stri_detect_regex stri_replace_all_regex
-#' @importFrom sf st_as_text st_geometry st_union st_join st_drop_geometry
-#' @importFrom tidyr pivot_wider
-#' @importFrom flextable flextable separate_header autofit theme_box valign align bg
-#' @importFrom flexlsx wb_add_flextable
-#' @importFrom openxlsx2 wb_workbook wb_add_worksheet
-#' @importFrom shinybusy show_modal_spinner remove_modal_spinner notify_success
+#' @importFrom shiny icon NS tagList
 mod_uso_actual_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -55,6 +46,8 @@ mod_uso_actual_ui <- function(id) {
 #' uso_actual Server Functions
 #'
 #' @noRd
+#' @importFrom shiny eventReactive moduleServer observeEvent req
+#' @importFrom terra crs
 mod_uso_actual_server <- function(id, crs, dec_sup){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

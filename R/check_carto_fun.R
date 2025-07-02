@@ -10,9 +10,7 @@
 #' @return Devuelve alguna alerta en la consola o en un modulo de shiny
 #' @export
 #'
-#' @importFrom shiny tags
-#' @importFrom shinybusy report_success report_warning report_failure
-#'
+#' @importFrom sf st_drop_geometry
 check_carto <- function(x, id, shiny = F){
   list_check <- list(
     "Áreas" = c("Nom_Predio", "N_Area", "Tipo_Bos", "Sup_ha", "Fuente"),

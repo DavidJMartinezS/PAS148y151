@@ -2,12 +2,8 @@
 #'
 #' @param input,output,session Internal parameters for {shiny}.
 #'     DO NOT REMOVE.
-#' @importFrom shiny reactive reactiveValues renderTable fluidRow tags
-#' @importFrom shinydashboardPlus renderUser dashboardUser socialButton
-#' @importFrom bsplus bs_embed_tooltip
-#' @importFrom shinybusy config_report
-#'
 #' @noRd
+#' @importFrom shiny eventReactive fileInput fluidRow icon isTruthy need numericInput observe observeEvent reactive renderUI req uiOutput validate
 app_server <- function(input, output, session) {
   options(shiny.maxRequestSize = 4000 * 1024 ^ 2, timeout = 600)
 
@@ -511,7 +507,8 @@ app_server <- function(input, output, session) {
         BD = input$bd_flora$datapath,
         rodales = rodales_def(),
         PAS = input$PAS,
-        cut_by_rod = input$cut_bd_by_rodal
+        cut_by_rod = input$cut_bd_by_rodal,
+        include_fp = input$include_fp
       )
     } else {
       NULL
@@ -575,10 +572,10 @@ app_server <- function(input, output, session) {
             }) %>%
             dplyr::bind_rows() %>%
             dplyr::pull(SP) %>%
-            paste0(collapse = "\n")
+            paste(collapse = "\n")
         )),
         html = TRUE,
-        type = "warning",
+        type = ifelse(input$PAS == 148, "danger", "warning"),
         closeOnEsc = T,
         showConfirmButton = T,
         animation = T
@@ -624,7 +621,7 @@ app_server <- function(input, output, session) {
   })
 
   observeEvent(catastro(),{
-    req(shiny::isTruthy(catastro()))
+    req(isTruthy(catastro()))
     check_input(
       x = catastro(),
       names_req = c('USO', 'SUBUSO', 'ESTRUCTURA'),
@@ -652,7 +649,7 @@ app_server <- function(input, output, session) {
   })
 
   observeEvent(suelos_uso_act(),{
-    req(shiny::isTruthy(suelos_uso_act()))
+    req(isTruthy(suelos_uso_act()))
     check_input(
       x = suelos_uso_act(),
       names_req = c('Clase_Uso'),
@@ -673,13 +670,14 @@ app_server <- function(input, output, session) {
       PAS = input$PAS,
       areas = areas_def(),
       rodales = rodales_def(),
-      cut_by_rod = input$cut_bd_by_rodal,
       TipoFor_num = T,
       predios = predios_def(),
       cut_by_prov = if (input$pred_cut_by_prov) input$provincia else NULL,
       dem = input$dem$datapath,
       add_parcelas = input$add_parcelas,
       bd_flora = bd_flora(),
+      cut_by_rod = input$cut_bd_by_rodal,
+      include_fp = input$include_fp,
       from_RCA = F,
       RCA = NULL,
       add_uso_actual = input$add_uso_actual,
@@ -943,9 +941,9 @@ app_server <- function(input, output, session) {
 
   ## Atributos de rodal ----
   tabla_attr_rodal_0 <- eventReactive(bd_flora(), {
-    shiny::validate(
-      shiny::need(shiny::isTruthy(bd_flora()), "Cargar excel con los datos de flora"),
-      shiny::need(shiny::isTruthy(rodales_def()), "Cargar capa de rodales")
+    validate(
+      need(isTruthy(bd_flora()), "Cargar excel con los datos de flora"),
+      need(isTruthy(rodales_def()), "Cargar capa de rodales")
     )
     get_tabla_attr_rodal(
       PAS = input$PAS,

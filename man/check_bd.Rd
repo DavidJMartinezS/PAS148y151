@@ -9,7 +9,7 @@ check_bd_flora(x, y = NULL)
 \arguments{
 \item{x}{Base de datos de flora}
 
-\item{y}{Capa}
+\item{y}{Capa mascara para filtrar las parcelas}
 
 \item{shiny}{Logico; si es \code{TRUE}, devuelve una alerta en un modulo de shiny.}
 }

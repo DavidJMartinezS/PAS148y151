@@ -35,16 +35,7 @@
 #' @export
 #'
 #' @import dataPAS
-#' @importFrom dplyr mutate_if mutate_at mutate select syms case_when filter arrange group_by cur_group_id ungroup count vars rename starts_with tally bind_rows rename_at contains rename_all
-#' @importFrom janitor round_half_up
-#' @importFrom sf st_area st_drop_geometry st_as_sf st_join st_crs st_intersection st_collection_extract st_make_valid read_sf st_as_text st_transform st_buffer st_bbox st_as_sfc st_geometry st_union st_crop st_zm st_nearest_feature st_equals st_set_geometry
-#' @importFrom stringi stri_detect_regex stri_extract_all_regex stri_trans_general stri_trans_tolower stri_extract stri_trans_totitle
-#' @importFrom terra crs `crs<-` rast crop minmax as.contour
-#' @importFrom units set_units drop_units
-#' @importFrom purrr map_dfr map2_dbl map_dbl
-#' @importFrom tidyr replace_na
-#' @importFrom osmdata opq add_osm_feature osmdata_sf
-#' @importFrom plyr round_any
+#' @importFrom dplyr case_when
 cart_rodales <- function(PAS, rodales, TipoFor_num = NULL, from_RCA = F, RCA = NULL, dec_sup = 2){
   stopifnot(c("Nom_Predio", "Tipo_For") %in% names(rodales) %>% all())
   PAS <- match.arg(as.character(PAS), choices = c(148, 149, 151))
@@ -294,43 +285,12 @@ cart_predios <- function(predios, cut_by_prov = NULL, dec_sup = 2){
 
 #' @rdname carto_digital
 #' @export
-cart_parcelas <- function(PAS, bd_flora, rodales, cut_by_rod){
+cart_parcelas <- function(PAS, bd_flora, rodales, cut_by_rod, include_fp){
   stopifnot(c("Parcela", "UTM_E", "UTM_E", "N_ind", "Habito", "Cob_BB", "DS_68") %in% names(bd_flora) %>% all())
   stopifnot(c("Nom_Predio", "N_Rodal") %in% names(rodales) %>% all())
   PAS <- match.arg(as.character(PAS), choices = c(148, 149, 151))
 
-  bd_flora %>%
-    mutate_at("N_ind", as.integer) %>%
-    {if (PAS == 148) {
-      .[] %>% dplyr::filter(
-        Habito %>% stringi::stri_trans_general("Latin-ASCII") %>% stringi::stri_detect_regex("arbol", case_insensitive = T),
-        !Cob_BB %>% stringi::stri_trans_tolower() %in% c(NA_character_, "fp", "---"),
-        !N_ind %in% c(NA, 0)
-      )
-    } else {
-      .[] %>% dplyr::filter(
-        DS_68 %>% stringi::stri_cmp_equiv("originaria", strength = 1),
-        !Cob_BB %>% stringi::stri_trans_tolower() %in% c(NA_character_, "fp", "---"),
-        !N_ind %in% c(NA, 0)
-      )
-    }} %>%
-    dplyr::select(-dplyr::matches("Nom_Predio|N_Rodal|Tipo_veg|Tipo_fores|Tipo_For|Subtipo_fo")) %>%
-    sf::st_as_sf(coords = c("UTM_E","UTM_N"), crs = sf::st_crs(rodales), remove = F) %>%
-    {if(cut_by_rod){
-      .[] %>% sf::st_intersection(sf::st_union(rodales))
-    } else .} %>%
-    sf::st_join(rodales %>% dplyr::select(Nom_Predio, N_Rodal, Tipo_fores, Tipo_For, Subtipo_fo, Tipo_veg), join = st_nearest_feature) %>%
-    dplyr::mutate_at("N_Rodal", as.integer) %>%
-    sf::st_drop_geometry() %>%
-    dplyr::mutate_at("N_ind", as.integer) %>%
-    dplyr::mutate(Nha = N_ind * 20) %>%
-    dplyr::arrange(N_Rodal) %>%
-    dplyr::group_by(Parcela, UTM_E, UTM_N) %>%
-    dplyr::arrange(N_Rodal) %>%
-    dplyr::mutate(N = dplyr::cur_group_id()) %>%
-    dplyr::group_by(N_Rodal, N) %>%
-    dplyr::mutate(N_Parc = dplyr::cur_group_id()) %>%
-    dplyr::ungroup() %>%
+  prepare_bd_flora(bd_flora, rodales = rodales, PAS = PAS, cut_by_rod = cut_by_rod, include_fp = include_fp) %>%
     dplyr::count(Nom_Predio, N_Rodal, N_Parc, UTM_E, UTM_N) %>%
     dplyr::select(-n) %>%
     dplyr::mutate(Fuente = "Elaboracion propia") %>%
@@ -595,6 +555,7 @@ cart_hidro_osm <- function(predios, cut = c("clip", "buffer", "crop", "crop_by_r
 
 #' @rdname carto_digital
 #' @export
+#' @importFrom sf st_as_text st_crs
 cart_caminos <- function(predios, cut = c("clip", "buffer", "crop", "crop_by_row"), buffer = 0){
   stopifnot(c("Nom_Predio") %in% names(predios) %>% all())
   cut <- match.arg(cut)
@@ -661,6 +622,7 @@ cart_caminos <- function(predios, cut = c("clip", "buffer", "crop", "crop_by_row
 
 #' @rdname carto_digital
 #' @export
+#' @importFrom osmdata add_osm_feature opq osmdata_sf
 cart_caminos_osm <- function(predios, cut = c("clip", "buffer", "crop", "crop_by_row"), buffer = 0){
   stopifnot(c("Nom_Predio") %in% names(predios) %>% all())
   cut <- match.arg(cut)
@@ -786,17 +748,19 @@ cart_curv_niv <- function(predios, dem, cut = c("clip", "buffer", "crop", "crop_
 
 #' @rdname carto_digital
 #' @export
+#' @importFrom dplyr rename_all
 get_carto_digital <- function(
     PAS,
     areas,
     rodales,
-    cut_by_rod,
     TipoFor_num = T,
     predios,
     cut_by_prov,
     dem,
     add_parcelas = F,
     bd_flora = NULL,
+    cut_by_rod,
+    include_fp,
     from_RCA = F,
     RCA = NULL,
     add_uso_actual = F,
@@ -851,41 +815,79 @@ get_carto_digital <- function(
 
   if (add_parcelas) {
     stopifnot(!is.null(bd_flora))
-    carto_parcelas <- cart_parcelas(PAS = PAS, bd_flora = bd_flora, rodales = rodales, cut_by_rod = cut_by_rod)
+    carto_parcelas <- cart_parcelas(
+      PAS = PAS,
+      bd_flora = bd_flora,
+      rodales = rodales,
+      cut_by_rod = cut_by_rod,
+      include_fp = include_fp
+    )
   }
   if (add_uso_actual) {
     stopifnot(!is.null(catastro) & !is.null(suelos))
-    carto_uso_actual <- cart_uso_actual(predios = carto_predios, catastro = catastro, suelos = suelos, dec_sup = dec_sup)
+    carto_uso_actual <- cart_uso_actual(
+      predios = carto_predios,
+      catastro = catastro,
+      suelos = suelos,
+      dec_sup = dec_sup
+    )
   }
   if (add_caminos) {
     stopifnot(!is.null(caminos_arg) & is.list(caminos_arg))
     stopifnot(c("cut", "buffer") %in% names(caminos_arg) %>% all())
-    carto_caminos <- cart_caminos(predios = predios, cut = caminos_arg$cut, buffer = caminos_arg$buffer)
+    carto_caminos <- cart_caminos(
+      predios = predios,
+      cut = caminos_arg$cut,
+      buffer = caminos_arg$buffer
+    )
   }
   if (add_caminos_osm) {
     stopifnot(!is.null(caminos_arg) & is.list(caminos_arg))
     stopifnot(c("cut", "buffer") %in% names(caminos_arg) %>% all())
-    carto_caminos_osm <- cart_caminos_osm(predios = predios, cut = caminos_arg$cut, buffer = caminos_arg$buffer)
+    carto_caminos_osm <- cart_caminos_osm(
+      predios = predios,
+      cut = caminos_arg$cut,
+      buffer = caminos_arg$buffer
+    )
   }
   if (add_hidro) {
     stopifnot(!is.null(hidro_arg) & is.list(hidro_arg))
     stopifnot(c("cut", "buffer") %in% names(hidro_arg) %>% all())
-    carto_hidro <- cart_hidro(predios = predios, fuente_hidro = fuente_hidro, cut = hidro_arg$cut, buffer = hidro_arg$buffer)
+    carto_hidro <- cart_hidro(
+      predios = predios,
+      fuente_hidro = fuente_hidro,
+      cut = hidro_arg$cut,
+      buffer = hidro_arg$buffer
+    )
   }
   if (add_hidro_osm) {
     stopifnot(!is.null(hidro_arg) & is.list(hidro_arg))
     stopifnot(c("cut", "buffer") %in% names(hidro_arg) %>% all())
-    carto_hidro_osm <- cart_hidro_osm(predios = predios, cut = hidro_arg$cut, buffer = hidro_arg$buffer)
+    carto_hidro_osm <- cart_hidro_osm(
+      predios = predios,
+      cut = hidro_arg$cut,
+      buffer = hidro_arg$buffer
+    )
   }
   if (add_curv_niv) {
     stopifnot(!is.null(curv_niv_arg) & is.list(curv_niv_arg))
     stopifnot(c("cut", "buffer") %in% names(curv_niv_arg) %>% all())
-    carto_curv_niv <- cart_curv_niv(predios = predios, dem = dem, cut = curv_niv_arg$cut, buffer = curv_niv_arg$buffer, step = step)
+    carto_curv_niv <- cart_curv_niv(
+      predios = predios,
+      dem = dem,
+      cut = curv_niv_arg$cut,
+      buffer = curv_niv_arg$buffer,
+      step = step
+    )
   }
 
   tabla_predios <- carto_predios %>%
     sf::st_join(predios %>% select(N_Predio, Propietari), largest = T) %>%
-    dplyr::left_join(comunas[,4:6] %>% st_drop_geometry() %>% rename_all(stringi::stri_trans_totitle)) %>%
+    dplyr::left_join(
+      comunas[,4:6] %>%
+        st_drop_geometry() %>%
+        rename_all(stringi::stri_trans_totitle)
+      ) %>%
     sf::st_drop_geometry() %>%
     dplyr::mutate_at(dplyr::vars(Nom_Predio, Propietari), tidyr::replace_na, "S/I") %>%
     dplyr::mutate_at(dplyr::vars(Rol), tidyr::replace_na, "S/R") %>%

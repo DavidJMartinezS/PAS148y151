@@ -23,16 +23,9 @@
 #' @name get_pred_rod_area
 #'
 #' @export
-#'
 #' @import dataPAS
-#' @importFrom dplyr filter select sym syms mutate mutate_at group_by summarise summarise_at ungroup case_when cur_group_id arrange vars pull rename count across
-#' @importFrom janitor round_half_up
-#' @importFrom sf read_sf st_transform st_crs st_intersection st_union st_collection_extract st_make_valid st_cast st_area st_join st_as_text st_geometry
-#' @importFrom stringi stri_cmp_equiv stri_detect_regex stri_replace_all_regex stri_trim stri_length
-#' @importFrom tibble rowid_to_column
-#' @importFrom tidyr replace_na
-#' @importFrom units set_units drop_units
-
+#'
+#' @importFrom sf st_set_geometry
 get_pred_rod_area <- function(
     PAS = c(148, 149, 151),
     LB,
@@ -163,9 +156,15 @@ get_pred_rod_area <- function(
         } else .}
     }} %>%
     {if ("N_Rodal" %in% names(.)) {
-      .[] %>% dplyr::group_by(N_Rodal) %>% dplyr::mutate(N_Rodal = as.integer(dplyr::cur_group_id())) %>% dplyr::ungroup()
+      .[] %>%
+        dplyr::group_by(N_Rodal) %>%
+        dplyr::mutate(N_Rodal = as.integer(dplyr::cur_group_id())) %>%
+        dplyr::ungroup()
     } else {
-      .[] %>% dplyr::group_by(PID) %>% dplyr::mutate(N_Rodal = as.integer(dplyr::cur_group_id())) %>% dplyr::ungroup()
+      .[] %>%
+        dplyr::group_by(PID) %>%
+        dplyr::mutate(N_Rodal = as.integer(dplyr::cur_group_id())) %>%
+        dplyr::ungroup()
     }} %>%
     dplyr::mutate(
       Tipo_Bos = tipo_bos,

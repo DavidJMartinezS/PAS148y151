@@ -4,11 +4,6 @@
 #'
 #' @return The return value, if any, from executing the utility.
 #'
-#' @importFrom sf read_sf st_drop_geometry st_transform st_make_valid st_union st_centroid st_coordinates
-#' @importFrom dplyr group_by tally ungroup mutate_at summarise arrange pull mutate
-#' @importFrom shinybusy report_failure notify_success
-#' @importFrom shiny tags
-#' @importFrom shinyjs reset
 #' @import dataPAS
 #' @noRd
 comunas_df <- sf::read_sf(system.file("Comunas.gdb", package = "dataPAS")) %>%
@@ -40,8 +35,8 @@ check_input <- function(x, names_req, huso = NULL, id_reset = NULL){
       title = "Ups!",
       text = tags$p(
         "Shapefile sin los campos requeridos", rep_br(2),
-        tags$b("Requeridos: "), paste0(names_req %>% shQuote(), collapse = ", "), rep_br(2),
-        tags$b("Faltan: "), paste0(setdiff(names_req, names(sf::st_drop_geometry(x))) %>% shQuote(), collapse = ", ")
+        tags$b("Requeridos: "), paste(names_req %>% shQuote(), collapse = ", "), rep_br(2),
+        tags$b("Faltan: "), paste(setdiff(names_req, names(sf::st_drop_geometry(x))) %>% shQuote(), collapse = ", ")
       )
     )
     if (!is.null(id_reset)) {
@@ -60,6 +55,6 @@ check_input <- function(x, names_req, huso = NULL, id_reset = NULL){
     }
   }
   if (ok) {
-    shinybusy::notify_success("Perfecto!", timeout = 3000, position = "right-bottom")
+    shinybusy::notify_success("Perfecto! Todos los campos necesarios :)", timeout = 3000, position = "right-bottom")
   }
 }

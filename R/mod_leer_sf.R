@@ -6,11 +6,7 @@
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList
-#' @importFrom shinyjs reset
-#' @importFrom tools file_ext file_path_sans_ext
-#' @importFrom sf read_sf st_zm st_make_valid
-#'
+#' @importFrom shiny NS
 mod_leer_sf_ui <- function(id, ...) {
   ns <- NS(id)
   shiny::fileInput(
@@ -26,6 +22,8 @@ mod_leer_sf_ui <- function(id, ...) {
 #' leer_sf Server Functions
 #'
 #' @noRd
+#' @importFrom sf st_transform
+#' @importFrom shiny moduleServer reactive req
 mod_leer_sf_server <- function(id, crs = NULL, fx = NULL, path = F, ...){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

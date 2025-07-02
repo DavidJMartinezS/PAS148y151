@@ -6,14 +6,7 @@
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList tags fileInput reactive req observeEvent
-#' @importFrom shinyWidgets materialSwitch
-#' @importFrom shinyalert shinyalert
-#' @importFrom dplyr rename_all mutate_at vars matches contains filter select mutate group_by arrange cur_group_id ungroup slice sample_n summarise pull
-#' @importFrom stringi stri_trans_totitle stri_trans_general stri_opts_brkiter stri_cmp_equiv stri_detect_regex stri_trans_toupper stri_trans_tolower stri_trim
-#' @importFrom sf st_as_sf st_crs st_join st_drop_geometry
-#' @importFrom tidyr unite
-#' @importFrom purrr map_chr
+#' @importFrom shiny fileInput NS tagList
 mod_bd_flora_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -46,6 +39,8 @@ mod_bd_flora_ui <- function(id) {
 #' bd_flora Server Functions
 #'
 #' @noRd
+#' @importFrom openxlsx2 read_xlsx
+#' @importFrom shiny moduleServer reactive req
 mod_bd_flora_server <- function(id, rodales_def){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

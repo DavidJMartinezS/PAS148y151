@@ -5,17 +5,7 @@
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
 #' @noRd
-#'
-#' @importFrom shiny NS tagList tags fileInput uiOutput textInput observeEvent numericInput uiOutput renderUI reactive observe eventReactive req
-#' @importFrom shinyWidgets materialSwitch actionBttn switchInput pickerInput numericInputIcon
-#' @importFrom shinyjs enable disable
-#' @importFrom shinybusy show_modal_spinner remove_modal_spinner report_warning
-#' @importFrom sf st_transform st_make_valid st_union st_centroid st_coordinates st_as_text st_geometry
-#' @importFrom dplyr rename_if mutate rename_all select mutate_at left_join relocate
-#' @importFrom stringi stri_detect_regex stri_trans_toupper stri_trans_general stri_trans_totitle
-#' @importFrom purrr map_vec
-#' @importFrom tidyr unnest
-#' @importFrom flextable flextable merge_v autofit theme_box valign align
+#' @importFrom shiny fileInput NS tagList textInput uiOutput
 mod_get_carto_digital_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -101,6 +91,8 @@ mod_get_carto_digital_ui <- function(id) {
 #' get_carto_digital Server Functions
 #'
 #' @noRd
+#' @importFrom dplyr vars
+#' @importFrom shiny eventReactive icon moduleServer numericInput observe observeEvent reactive renderUI req
 mod_get_carto_digital_server <- function(id, crs, dec_sup, carto_out, huso, inputs, carto){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

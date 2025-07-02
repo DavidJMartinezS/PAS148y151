@@ -6,16 +6,7 @@
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList tags uiOutput fileInput renderUI observeEvent observe isTruthy eventReactive reactive
-#' @importFrom shinyWidgets materialSwitch actionBttn pickerInput updatePickerInput
-#' @importFrom shinyjs enable disable
-#' @importFrom sf st_crs st_drop_geometry st_geometry st_distance st_nearest_feature
-#' @importFrom dplyr mutate case_when bind_cols syms relocate last_col
-#' @importFrom purrr map_dbl
-#' @importFrom units drop_units
-#' @importFrom janitor round_half_up
-#' @importFrom shinybusy show_modal_spinner remove_modal_spinner
-#'
+#' @importFrom shiny icon NS tagList uiOutput
 mod_add_attr_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -62,6 +53,9 @@ mod_add_attr_ui <- function(id) {
 #' add_attr Server Functions
 #'
 #' @noRd
+#' @importFrom dplyr select
+#' @importFrom shiny eventReactive fileInput isTruthy moduleServer observe observeEvent renderUI req
+#' @importFrom shinyWidgets updatePickerInput
 mod_add_attr_server <- function(id, PAS){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

@@ -6,13 +6,7 @@
 #'
 #' @noRd
 #'
-#' @importFrom bsplus bs_embed_tooltip
-#' @importFrom dplyr group_by mutate syms
-#' @importFrom shiny NS tagList eventReactive observe req observeEvent tags
-#' @importFrom shinyWidgets pickerInput actionBttn
-#' @importFrom shinyjs enable disable
-#' @importFrom shinybusy show_modal_spinner remove_modal_spinner notify_success
-#'
+#' @importFrom shiny icon NS tagList
 mod_st_order_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -56,6 +50,7 @@ mod_st_order_ui <- function(id) {
 #' st_order Server Functions
 #'
 #' @noRd
+#' @importFrom shiny eventReactive moduleServer observe observeEvent req
 mod_st_order_server <- function(id){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

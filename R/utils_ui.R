@@ -4,7 +4,6 @@
 #'
 #' @return The return value, if any, from executing the utility.
 #'
-#' @importFrom bsplus bs_accordion bs_set_opts bs_append bs_carousel bs_set_data shinyInput_label_embed shiny_iconlink bs_embed_tooltip bs_carousel_image
 #'
 #' @noRd
 info_dashboard <- function(){

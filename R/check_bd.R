@@ -1,28 +1,40 @@
 #' Chequeo Bases de Datos
 #'
 #' @param x Base de datos de flora
-#' @param y Capa
+#' @param y Capa mascara para filtrar las parcelas
 #' @param shiny Logico; si es \code{TRUE}, devuelve una alerta en un modulo de shiny.
 #'
 #' @return Devuelve alertas impresas en la consola o bien en modulos de shiny.
 #' @rdname check_bd
 #' @export
 #'
-#' @importFrom shiny tags
-#' @importFrom shinyalert shinyalert
-#' @importFrom shinybusy notify_success
-#' @importFrom sf st_is st_as_sf st_crs st_intersection st_union st_collection_extract st_drop_geometry
-#' @importFrom dplyr count filter pull
 check_bd_flora <- function(x, y = NULL){
   shiny <- shiny::isRunning()
+  ok <- T
+
   if(!is.null(y) & all(c('UTM_E', 'UTM_N') %in% names(x))){
-    if (any(sf::st_is(y, "POLYGON") | sf::st_is(y, "MULTIPOLYGON"))) {
+    if (x %>% dplyr::select(dplyr::starts_with("UTM")) %>% apply(2, function(x){!any(is.na(x)) & is.numeric(x)})) {
       x <- x %>%
         sf::st_as_sf(coords = c("UTM_E", "UTM_N"), crs = sf::st_crs(y), remove = F) %>%
         sf::st_intersection(sf::st_union(sf::st_collection_extract(y, "POLYGON"))) %>%
         sf::st_drop_geometry()
+    } else {
+      x <- x %>%
+        dplyr::mutate_at(c("UTM_E", "UTM_N"), as.numeric) %>%
+        tidyr::drop_na(UTM_E, UTM_N) %>%
+        sf::st_as_sf(coords = c("UTM_E", "UTM_N"), crs = sf::st_crs(y), remove = F) %>%
+        sf::st_intersection(sf::st_union(sf::st_collection_extract(y, "POLYGON"))) %>%
+        sf::st_drop_geometry()
+      if (shiny) {
+        shinybusy::notify_warning(text = "Se quitaron los registros sin coordenadas", timeout = "5000", position = "right-bottom")
+      } else {
+        cat("\033[33mSe quitaron los registros sin coordenadas", "\n")
+      }
     }
-  } %>% suppressWarnings()
+    if (any(sf::st_is(y, "POLYGON") | sf::st_is(y, "MULTIPOLYGON"))) {
+
+    }
+  } %>% suppressWarnings() %>% suppressMessages()
   # Verificar que estén los campos mínimos ----
   if (!all(c('Parcela', 'UTM_E', 'UTM_N', 'Especie', 'N_ind', 'Habito', 'Cob_BB', 'Tipo_veg', 'DS_68', 'RCE') %in% names(x))) {
     if (shiny) {
@@ -32,14 +44,15 @@ check_bd_flora <- function(x, y = NULL){
       )
     } else {
       cat(
-        "\033[31mProblemas!","\U0001FAE0","Shapefile sin los campos requeridos","\n",
-        "\033[34mRequeridos: ", paste0(c('Parcela', 'UTM_E', 'UTM_N', 'Especie', 'N_ind', 'Habito', 'Cob_BB', 'Tipo_veg', 'DS_68', 'RCE') %>% shQuote(), collapse = ", "), "\n",
-        "Faltan: ", paste0(setdiff(c('Parcela', 'UTM_E', 'UTM_N', 'Especie', 'N_ind', 'Habito', 'Cob_BB', 'Tipo_veg', 'DS_68', 'RCE'), names(x)) %>% shQuote(), collapse = ", "),
-        "\n"
+        "\033[31mProblemas!","\U0001FAE0","Shapefile sin los campos requeridos", "\n",
+        "\033[34mRequeridos: ", paste(c('Parcela', 'UTM_E', 'UTM_N', 'Especie', 'N_ind', 'Habito', 'Cob_BB', 'Tipo_veg', 'DS_68', 'RCE') %>% shQuote(), collapse = ", "), "\n",
+        "Faltan: ", paste(setdiff(c('Parcela', 'UTM_E', 'UTM_N', 'Especie', 'N_ind', 'Habito', 'Cob_BB', 'Tipo_veg', 'DS_68', 'RCE'), names(x)) %>% shQuote(), collapse = ", "), "\n"
       )
     }
-  } else {
-    # Verificar coberturas ----
+    ok <- F
+  }
+  # Verificar coberturas Braun Blanquet ----
+  if ("Cob_BB" %in% names(x)) {
     if (!x$Cob_BB %in% c("fp", "r", "+", "1", "2", "3", "4", "5", "6", "---") %>% all()) {
       if (shiny) {
         shinyalert::shinyalert(
@@ -76,11 +89,14 @@ check_bd_flora <- function(x, y = NULL){
           paste0(
             setdiff(unique(x$Cob_BB), c("fp", "r", "+", "1", "2", "3", "4", "5", "6", "---")) %>% shQuote(),
             collapse = ", "
-          )
+          ), "\n"
         )
       }
     }
-    # Verificar coordenadas
+  }
+  # Verificar coordenadas ----
+  if (all(c("Parcela", "UTM_E", "UTM_N") %in% names(x))) {
+    ## UTM_E y UTM_N ----
     if (
       !x$UTM_E %>%
       stringi::stri_count_regex("\\w") %>%
@@ -121,176 +137,75 @@ check_bd_flora <- function(x, y = NULL){
           ),"\n"
         )
       }
+      ok <- F
     }
-    if (c("Campana", "Cuadrilla") %in% names(x) %>% all()) {
-      # Verificar coordenadas repetidas
-      if (
-        x %>%
-        dplyr::count(Campana, Cuadrilla, Parcela, UTM_E, UTM_N) %>%
-        dplyr::count(Campana, Cuadrilla, Parcela, sort = T) %>%
-        dplyr::filter(n > 1) %>%
-        nrow() %>%
-        .[] >= 1
-      ) {
-        if (shiny) {
-          shinyalert::shinyalert(
-            title = "Mismas parcela, diferentes coordenadas!",
-            text = tags$p(
-              "Las siguientes parcelas presentan mas de una coordenada teniendo la misma campaña y cuadrilla:",
-              rep_br(2),
-              paste(
-                x %>%
-                  dplyr::count(Campana, Cuadrilla, Parcela, UTM_E, UTM_N) %>%
-                  dplyr::count(Campana, Cuadrilla, Parcela, sort = T) %>%
-                  dplyr::filter(n > 1) %>%
-                  dplyr::pull(Parcela) %>%
-                  shQuote(),
-                collapse = ", "
-              )
-            ),
-            html = TRUE,
-            type = "error",
-            closeOnEsc = T,
-            showConfirmButton = T,
-            animation = T
-          )
-        } else {
-          cat(
-            "\033[31mProblemas!","\U0001FAE0", "Mismas parcela, diferentes coordenadas!", "\n",
-            "\033[34mLas siguientes parcelas presentan mas de una coordenada teniendo la misma campaña y cuadrilla:","\n",
+    ## Verificar coordenadas repetidas ----
+    if (
+      !x %>%
+      dplyr::count(Parcela, UTM_E, UTM_N) %>%
+      dplyr::count(Parcela, sort = T) %>%
+      dplyr::pull(n) %>%
+      all(. == 1)
+    ) {
+      if (shiny) {
+        shinyalert::shinyalert(
+          title = "Mismas parcela, diferentes coordenadas!",
+          text = tags$p(
+            "Las siguientes parcelas presentan mas de una coordenada:",
+            rep_br(2),
             paste0(
               x %>%
-                dplyr::count(Campana, Cuadrilla, Parcela, UTM_E, UTM_N) %>%
-                dplyr::count(Campana, Cuadrilla, Parcela, sort = T) %>%
+                dplyr::count(Parcela, UTM_E, UTM_N) %>%
+                dplyr::count(Parcela) %>%
                 dplyr::filter(n > 1) %>%
                 dplyr::pull(Parcela) %>%
                 shQuote(),
               collapse = ", "
-            ),"\n"
-          )
-        }
-      }
-      # Verificar cuadrillas repetidas
-      if (
-        x %>%
-        dplyr::count(Campana, Cuadrilla, Parcela, UTM_E, UTM_N) %>%
-        dplyr::count(Campana, Parcela, UTM_E, UTM_N, sort = T) %>%
-        dplyr::filter(n > 1) %>%
-        nrow() %>%
-        .[] >= 1
-      ) {
-        if (shiny) {
-          shinyalert::shinyalert(
-            title = "Mismas parcela, diferentes cuadrillas!",
-            text = tags$p(
-              "Las siguientes parcelas presentan mas de una cuadrilla teniendo la misma campaña y coordenada:",
-              rep_br(2),
-              paste(
-                x %>%
-                  dplyr::count(Campana, Cuadrilla, Parcela, UTM_E, UTM_N) %>%
-                  dplyr::count(Campana, Parcela, UTM_E, UTM_N, sort = T) %>%
-                  dplyr::filter(n > 1) %>%
-                  dplyr::pull(Parcela) %>%
-                  shQuote(),
-                collapse = ", "
-              )
-            ),
-            html = TRUE,
-            type = "error",
-            closeOnEsc = T,
-            showConfirmButton = T,
-            animation = T
-          )
-        } else {
-          cat(
-            "\033[31mProblemas!","\U0001FAE0", "Mismas parcela, diferentes cuadrillas!", "\n",
-            "\033[34mLas siguientes parcelas presentan mas de una cuadrilla teniendo la misma campaña y coordenada:", "\n",
-            paste(
-              x %>%
-                dplyr::count(Campana, Cuadrilla, Parcela, UTM_E, UTM_N) %>%
-                dplyr::count(Campana, Parcela, UTM_E, UTM_N, sort = T) %>%
-                dplyr::filter(n > 1) %>%
-                dplyr::pull(Parcela) %>%
-                shQuote(),
-              collapse = ", "
-            ),"\n"
-          )
-        }
-      }
-      # Verificar campañas repetidas
-      if (
-        x %>%
-        dplyr::count(Campana, Cuadrilla, Parcela, UTM_E, UTM_N) %>%
-        dplyr::count(Cuadrilla, Parcela, UTM_E, UTM_N, sort = T) %>%
-        dplyr::filter(n > 1) %>%
-        nrow() %>%
-        .[] >= 1
-      ) {
-        if (shiny) {
-          shinyalert::shinyalert(
-            title = "Mismas parcela, diferentes campañas!",
-            text = tags$p(
-              "Las siguientes parcelas se repiten en más de una campaña:",
-              rep_br(2),
-              paste(
-                x %>%
-                  dplyr::count(Campana, Cuadrilla, Parcela, UTM_E, UTM_N) %>%
-                  dplyr::count(Cuadrilla, Parcela, UTM_E, UTM_N, sort = T) %>%
-                  dplyr::filter(n > 1) %>%
-                  dplyr::pull(Parcela) %>%
-                  shQuote(),
-                collapse = ", "
-              )
-            ),
-            html = TRUE,
-            type = "error",
-            closeOnEsc = T,
-            showConfirmButton = T,
-            animation = T
-          )
-        } else {
-          cat(
-            "\033[31mProblemas!","\U0001FAE0", "Mismas parcela, diferentes campañas!", "\n",
-            "\033[34mLas siguientes parcelas se repiten en más de una campaña:", "\n",
-            paste0(
-              x %>%
-                dplyr::count(Campana, Cuadrilla, Parcela, UTM_E, UTM_N) %>%
-                dplyr::count(Cuadrilla, Parcela, UTM_E, UTM_N, sort = T) %>%
-                dplyr::filter(n > 1) %>%
-                dplyr::pull(Parcela) %>%
-                shQuote(),
-              collapse = ", "
-            ),"\n"
-          )
-        }
+            )
+          ),
+          html = TRUE,
+          type = "error",
+          closeOnEsc = T,
+          showConfirmButton = T,
+          animation = T
+        )
       } else {
-        if (shiny) {
-          shinybusy::notify_success("Perfecto!", timeout = 3000, position = "right-bottom")
-        } else {
-          cat("\033[32mPerfecto!","\U0001F601", "No se han encontrado observaciones", "\n")
-        }
+        cat(
+          "\033[31mProblemas!","\U0001FAE0", "Mismas parcela, diferentes coordenadas!", "\n",
+          "\033[34mLas siguientes parcelas presentan mas de una coordenada:", "\n",
+          paste0(
+            x %>%
+              dplyr::count(Parcela, UTM_E, UTM_N) %>%
+              dplyr::count(Parcela) %>%
+              dplyr::filter(n > 1) %>%
+              dplyr::pull(Parcela) %>%
+              shQuote(),
+            collapse = ", "
+          ),"\n"
+        )
       }
-    } else {
-      # Verificar coordenadas repetidas
+      ok <- F
+    }
+    ## Especies repetidas por parcela ----
+    if ("Especie" %in% names(x)) {
       if (
         !x %>%
-        dplyr::count(Parcela, UTM_E, UTM_N) %>%
-        dplyr::count(Parcela, sort = T) %>%
+        dplyr::count(Parcela, UTM_E, UTM_N, Especie) %>%
         dplyr::pull(n) %>%
         all(. == 1)
       ) {
         if (shiny) {
           shinyalert::shinyalert(
-            title = "Mismas parcela, diferentes coordenadas!",
+            title = "Registro duplicado de especies en una parcela!",
             text = tags$p(
-              "Las siguientes parcelas presentan mas de una coordenada:",
+              "Las siguientes parcelas presentan el registro de más de una especie en una parcela:",
               rep_br(2),
               paste0(
                 x %>%
-                  dplyr::count(Parcela, UTM_E, UTM_N) %>%
-                  dplyr::count(Parcela) %>%
-                  dplyr::filter(Parcela > 1) %>%
+                  dplyr::count(Parcela, UTM_E, UTM_N, Especie) %>%
+                  dplyr::filter(n > 1) %>%
                   dplyr::pull(Parcela) %>%
+                  unique() %>%
                   shQuote(),
                 collapse = ", "
               )
@@ -303,26 +218,30 @@ check_bd_flora <- function(x, y = NULL){
           )
         } else {
           cat(
-            "\033[31mProblemas!","\U0001FAE0", "Mismas parcela, diferentes coordenadas!", "\n",
-            "\033[34mLas siguientes parcelas presentan mas de una coordenada:", "\n",
+            "\033[31mProblemas!","\U0001FAE0", "Registro duplicado de especies en una parcela!", "\n",
+            "\033[34mLas siguientes parcelas presentan el registro de más de una especie en una parcela:", "\n",
             paste0(
               x %>%
-                dplyr::count(Parcela, UTM_E, UTM_N) %>%
-                dplyr::count(Parcela) %>%
-                dplyr::filter(Parcela > 1) %>%
+                dplyr::count(Parcela, UTM_E, UTM_N, Especie) %>%
+                dplyr::filter(n > 1) %>%
                 dplyr::pull(Parcela) %>%
+                unique() %>%
                 shQuote(),
               collapse = ", "
             ),"\n"
           )
         }
-      } else {
-        if (shiny) {
-          shinybusy::notify_success("Perfecto!", timeout = 3000, position = "right-bottom")
-        } else {
-          cat("\033[32mPerfecto!","\U0001F601", "No se han encontrado observaciones", "\n")
-        }
+        ok <- F
       }
     }
   } %>% suppressWarnings() %>% suppressMessages()
+
+  # OK ----
+  if (ok) {
+    if (shiny) {
+      shinybusy::notify_success("Perfecto!", timeout = 3000, position = "right-bottom")
+    } else {
+      cat("\033[32mPerfecto!","\U0001F601", "No se han encontrado observaciones", "\n")
+    }
+  }
 }

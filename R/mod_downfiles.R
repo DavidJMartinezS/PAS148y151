@@ -6,14 +6,7 @@
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tags downloadHandler reactive observe isTruthy
-#' @importFrom shinyWidgets downloadBttn
-#' @importFrom shinyjs enable disable
-#' @importFrom sf write_sf
-#' @importFrom tools file_ext file_path_sans_ext
-#' @importFrom purrr map pwalk
-#' @importFrom zip zip
-#'
+#' @importFrom shiny icon NS
 mod_downfiles_ui <- function(id, style = "material-circle", icon = "download", size = "sm", color = "success", ...) {
   ns <- NS(id)
   tags$div(
@@ -32,6 +25,7 @@ mod_downfiles_ui <- function(id, style = "material-circle", icon = "download", s
 #' downfiles Server Functions
 #'
 #' @noRd
+#' @importFrom shiny downloadHandler isTruthy moduleServer observe reactive
 mod_downfiles_server <- function(id, x, name_save){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
@@ -66,7 +60,7 @@ mod_downfiles_server <- function(id, x, name_save){
         wd <- getwd()
         setwd(temp_dir)
         file.remove(list.files(pattern = "\\."))
-        pwalk(
+        purrr::pwalk(
           if(length(filetype()) == 1) {
             list(list(x), list(filetype()), ifelse(inherits(name_save, "list"), name_save, list(name_save)))
           } else {
@@ -77,13 +71,13 @@ mod_downfiles_server <- function(id, x, name_save){
               y,
               sf = sf::write_sf(x, paste0(tools::file_path_sans_ext(z), ".shp")),
               wb = openxlsx2::wb_save(x, paste0(tools::file_path_sans_ext(z), ".xlsx"), overwrite = T),
-              xlsx = writexl::write_xlsx(x, paste0(tools::file_path_sans_ext(z), ".xlsx"))
+              xlsx = openxlsx2::write_xlsx(x, paste0(tools::file_path_sans_ext(z), ".xlsx"))
             )
           }
         )
         list_files <- unname(unlist(map(unlist(name_save), function(x){list.files(pattern = x)})))
         if(tools::file_ext(file) == "zip") {
-          zip(zipfile = file, files = list_files)
+          zip::zip(zipfile = file, files = list_files)
         } else {
           file.copy(from = list_files, to = file, overwrite = T)
         }

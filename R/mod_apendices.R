@@ -6,14 +6,7 @@
 #'
 #' @noRd
 #'
-#' @importFrom dplyr rename_all rename_at rename_if mutate_at contains starts_with vars matches
-#' @importFrom janitor clean_names
-#' @importFrom shiny NS tagList tags fileInput uiOutput observeEvent renderUI reactive req observe eventReactive isTruthy
-#' @importFrom shinyWidgets virtualSelectInput materialSwitch actionBttn
-#' @importFrom shinyjs enable disable
-#' @importFrom openxlsx2 read_xlsx
-#' @importFrom sf st_distance
-#' @importFrom stringi stri_trans_totitle stri_opts_brkiter stri_cmp_equiv stri_detect_regex stri_trans_general stri_trans_toupper stri_replace_all_regex
+#' @importFrom shiny fileInput NS tagList uiOutput
 mod_apendices_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -96,6 +89,8 @@ mod_apendices_ui <- function(id) {
 #' apendices Server Functions
 #'
 #' @noRd
+#' @importFrom dplyr if_else
+#' @importFrom shiny eventReactive fileInput isTruthy moduleServer observe observeEvent reactive renderUI req
 mod_apendices_server <- function(id, PAS, provincia, huso, crs, inputs, carto){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

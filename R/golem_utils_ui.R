@@ -8,7 +8,7 @@
 #'
 #' @examples
 #' list_to_li(c("a", "b"))
-#' @importFrom shiny tags tagAppendAttributes tagList
+#' @importFrom shiny tagAppendAttributes tagList
 list_to_li <- function(list, class = NULL) {
   if (is.null(class)) {
     tagList(
@@ -44,7 +44,7 @@ list_to_li <- function(list, class = NULL) {
 #'
 #' @examples
 #' list_to_p(c("This is the first paragraph", "this is the second paragraph"))
-#' @importFrom shiny tags tagAppendAttributes tagList
+#' @importFrom shiny tagAppendAttributes tagList
 #'
 list_to_p <- function(list, class = NULL) {
   if (is.null(class)) {
@@ -72,7 +72,7 @@ list_to_p <- function(list, class = NULL) {
   }
 }
 
-#' @importFrom shiny tags tagAppendAttributes tagList
+#' @importFrom shiny HTML tagAppendAttributes tagList
 named_to_li <- function(list, class = NULL) {
   if (is.null(class)) {
     res <- mapply(
@@ -201,7 +201,7 @@ jq_hide <- function(id) {
 #'
 #' @examples
 #' with_red_star("Enter your name here")
-#' @importFrom shiny tags HTML
+#' @importFrom shiny HTML
 with_red_star <- function(text) {
   shiny::tags$span(
     HTML(

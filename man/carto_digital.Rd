@@ -34,7 +34,7 @@ cart_rang_pend(PAS, areas, dem, dec_sup = 2)
 
 cart_predios(predios, cut_by_prov = NULL, dec_sup = 2)
 
-cart_parcelas(PAS, bd_flora, rodales, cut_by_rod)
+cart_parcelas(PAS, bd_flora, rodales, cut_by_rod, include_fp)
 
 cart_uso_actual(predios, catastro, suelos, dec_sup = 2)
 
@@ -75,13 +75,14 @@ get_carto_digital(
   PAS,
   areas,
   rodales,
-  cut_by_rod,
   TipoFor_num = T,
   predios,
   cut_by_prov,
   dem,
   add_parcelas = F,
   bd_flora = NULL,
+  cut_by_rod,
+  include_fp,
   from_RCA = F,
   RCA = NULL,
   add_uso_actual = F,

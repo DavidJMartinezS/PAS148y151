@@ -15,12 +15,6 @@
 #' @rdname spatial_functions
 #' @export
 #'
-#' @importFrom igraph graph_from_adjacency_matrix components
-#' @importFrom sf st_distance st_agr st_difference st_union st_intersection st_buffer st_centroid st_coordinates st_nearest_feature st_geometry st_point st_sfc st_crs
-#' @importFrom dplyr bind_rows group_by summarise pull mutate slice arrange expr desc
-#' @importFrom terra rast `crs<-` crop terrain extract crs
-#' @importFrom janitor round_half_up
-#'
 group_by_distance <- function(x, distance){
   stopifnot("El objeto ingresado no es un objeto de la clase 'sf'." = inherits(x, "sf") || inherits(x, "sfc"))
   dist_matrix = sf::st_distance(x, by_element = FALSE)
@@ -46,10 +40,10 @@ my_union <- function(x, y) {
   }
   x %>%
     sf::st_difference(sf::st_union(y)) %>%
-    st_collection_extract(geom_type) %>%
+    sf::st_collection_extract(geom_type) %>%
     dplyr::bind_rows(
       sf::st_intersection(x, y) %>%
-        st_collection_extract(geom_type)
+        sf::st_collection_extract(geom_type)
     )
 }
 
@@ -61,7 +55,7 @@ get_slope <- function (dem, x) {
   if (inherits(dem, "character")) {
     stopifnot("ruta del archivo no encontrada" = file.exists(dem))
   }
-  if (inherits(dem, "SpatRaster")) dem else terra::rast(dem) %>%
+  (if (inherits(dem, "SpatRaster")) dem else terra::rast(dem)) %>%
     terra::`crs<-`(terra::crs(x)) %>%
     terra::crop(sf::st_buffer(x, 50)) %>%
     terra::terrain(v = "slope", neighbors = 8, unit = "degrees") %>%

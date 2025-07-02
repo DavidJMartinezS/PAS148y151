@@ -6,12 +6,7 @@
 #'
 #' @return Tabla con los atributos de rodal
 #' @export
-#'
-#' @importFrom dplyr syms group_by summarise rename arrange select bind_rows filter ungroup count left_join case_when mutate
-#' @importFrom sf st_as_sf st_distance st_join st_nearest_feature st_drop_geometry st_as_sf st_collection_extract st_crs
-#' @importFrom tidyr complete unnest
-#' @importFrom janitor round_half_up
-#' @importFrom purrr map
+#' @importFrom desc desc
 get_tabla_attr_rodal <- function(PAS, bd_flora, rodales_def){
   stopifnot(PAS %in% c(148, 151))
   stopifnot(inherits(rodales_def, "sf"))
@@ -56,12 +51,12 @@ get_tabla_attr_rodal <- function(PAS, bd_flora, rodales_def){
       )
     } else {
       cat(
-        "Los siguientes puntos están a más de 5 metros de los rodales:", "\n",
+        "Los siguientes puntos están a más de 5 metros de los rodales:",
         nha_parc[nha_parc %>% sf::st_distance(rodales_def) %>% apply(1, min) %>% .[] > 5, ]$Parcela %>%
           {if(length(. > 10)) .[c(1:10)] else .} %>%
           shQuote() %>% paste0(collapse = ", ") %>%
           {if(length(. > 10)) paste0(., ", etc...") else .},
-        "Por favor revisar", "\n"
+        "Por favor revisar", sep = "\n"
       )
     }
   }
@@ -82,7 +77,8 @@ get_tabla_attr_rodal <- function(PAS, bd_flora, rodales_def){
 
   df <- rodales_def %>%
     dplyr::count(N_Rodal, !!!vars_tbl_attr) %>% dplyr::select(-n) %>%
-    sf::st_join(nha_parc %>% dplyr::select(N_Parc, Nha), join = st_nearest_feature)
+    sf::st_collection_extract("POLYGON") %>%
+    sf::st_join(nha_parc %>% dplyr::select(N_Parc, Nha))
 
   tabla_attr_rodal <- df %>%
     dplyr::bind_rows(
