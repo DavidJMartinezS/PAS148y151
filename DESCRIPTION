@@ -16,6 +16,7 @@ Imports:
     fresh,
     ftExtra,
     golem,
+    grDevices,
     igraph,
     janitor,
     magrittr,
@@ -39,7 +40,7 @@ Imports:
     tidyr,
     tools,
     units,
-    writexl,
+    utils,
     zip
 Config/testthat/edition: 3
 Encoding: UTF-8

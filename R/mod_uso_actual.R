@@ -6,7 +6,6 @@
 #'
 #' @noRd
 #'
-#' @importFrom shiny icon NS tagList
 mod_uso_actual_ui <- function(id) {
   ns <- NS(id)
   tagList(

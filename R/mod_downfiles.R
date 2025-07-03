@@ -6,7 +6,6 @@
 #'
 #' @noRd
 #'
-#' @importFrom shiny icon NS
 mod_downfiles_ui <- function(id, style = "material-circle", icon = "download", size = "sm", color = "success", ...) {
   ns <- NS(id)
   tags$div(
@@ -25,7 +24,6 @@ mod_downfiles_ui <- function(id, style = "material-circle", icon = "download", s
 #' downfiles Server Functions
 #'
 #' @noRd
-#' @importFrom shiny downloadHandler isTruthy moduleServer observe reactive
 mod_downfiles_server <- function(id, x, name_save){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

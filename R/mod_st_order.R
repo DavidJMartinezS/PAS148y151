@@ -6,7 +6,6 @@
 #'
 #' @noRd
 #'
-#' @importFrom shiny icon NS tagList
 mod_st_order_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -50,7 +49,6 @@ mod_st_order_ui <- function(id) {
 #' st_order Server Functions
 #'
 #' @noRd
-#' @importFrom shiny eventReactive moduleServer observe observeEvent req
 mod_st_order_server <- function(id){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

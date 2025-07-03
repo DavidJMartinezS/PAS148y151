@@ -35,7 +35,6 @@
 #' @export
 #'
 #' @import dataPAS
-#' @importFrom dplyr case_when
 cart_rodales <- function(PAS, rodales, TipoFor_num = NULL, from_RCA = F, RCA = NULL, dec_sup = 2){
   stopifnot(c("Nom_Predio", "Tipo_For") %in% names(rodales) %>% all())
   PAS <- match.arg(as.character(PAS), choices = c(148, 149, 151))
@@ -76,7 +75,7 @@ cart_rodales <- function(PAS, rodales, TipoFor_num = NULL, from_RCA = F, RCA = N
       .[] %>%
         dplyr::mutate_if(
           names(.) == "Tipo_For",
-          list(Tipo_For = ~case_when(
+          list(Tipo_For = ~dplyr::case_when(
             .x %>% stringi::stri_detect_regex("no.*aplica", case_insensitive = T) ~ "No aplica",
             .x %>% stringi::stri_detect_regex("alerce", case_insensitive = T) ~ "1",
             .x %>% stringi::stri_detect_regex("araucaria", case_insensitive = T) ~ "2",

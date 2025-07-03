@@ -22,7 +22,6 @@
 #' @rdname get_apendices
 #' @export
 #'
-#' @importFrom dplyr pull starts_with vars
 apendice_2_3 <- function(
     PAS,
     bd_flora,
@@ -54,7 +53,7 @@ apendice_2_3 <- function(
     dplyr::mutate(Fuente = "Elaboracion propia") %>%
     sf::st_as_sf(coords = c("UTM_E","UTM_N"), crs = sf::st_crs(rodales), remove = F) %>%
     dplyr::rename(Coord_X = UTM_E, Coord_Y = UTM_N) %>%
-    dplyr::mutate_at(vars(starts_with("Coord")), janitor::round_half_up) %>%
+    dplyr::mutate_at(dplyr::vars(dplyr::starts_with("Coord")), janitor::round_half_up) %>%
     dplyr::arrange(N_Parc) %>%
     dplyr::select(Nom_Predio, N_Rodal, Tipo_veg, N_Parc, Coord_X, Coord_Y, Fuente)
 
@@ -107,7 +106,7 @@ apendice_2_3 <- function(
 
   if (!is.null(bd_pcob)) {
     df_pcob <- bd_pcob %>%
-      dplyr::select(-starts_with("UTM")) %>%
+      dplyr::select(-dplyr::starts_with("UTM")) %>%
       dplyr::inner_join(
         bd_flora %>% dplyr::count(Parcela, N_Parc, UTM_E, UTM_N) %>% dplyr::select(-n)
       ) %>%
@@ -150,7 +149,7 @@ apendice_2_3 <- function(
         warning(
           "Inconsistencias en las parcelas: ",
           dplyr::anti_join(.[], bd_flora %>% dplyr::count(Parcela, N_Parc, UTM_E, UTM_N)) %>%
-            pull(Parcela) %>% unique() %>% shQuote() %>% paste(collapse = " - "),
+            dplyr::pull(Parcela) %>% unique() %>% shQuote() %>% paste(collapse = " - "),
           "Se utilizó inner_join en vez de left_join"
         )
         .[] %>% dplyr::inner_join(bd_flora %>% dplyr::count(Parcela, N_Parc, UTM_E, UTM_N) %>% select(-n))
@@ -323,8 +322,6 @@ apendice_2_3 <- function(
 
 #' @rdname get_apendices
 #' @export
-#' @importFrom grDevices boxplot.stats
-#' @importFrom stats qt sd
 apendice_5_PAS148 <- function(
     bd_flora,
     rodales,
@@ -486,7 +483,7 @@ apendice_5_PAS148 <- function(
     dplyr::ungroup() %>%
     split(.$Tipo_veg) %>%
     purrr::map(function(x) {
-      out <- boxplot.stats(x$Nha)$out
+      out <- grDevices::boxplot.stats(x$Nha)$out
       x %>% dplyr::filter(!Nha %in% c(out))
     }) %>%
     dplyr::bind_rows()
@@ -598,7 +595,7 @@ apendice_5_PAS148 <- function(
 
   tabla_attr_rodal_final <- tabla_attr_rodal %>%
     dplyr::mutate(
-      Nom_attr = case_when(
+      Nom_attr = dplyr::case_when(
         !N_Rodal %in% unique(dplyr::bind_rows(nha_ptos, nha_est, nha_otros) %>% .$N_Rodal) ~ "Encontrar otro método de estimación",
         .default = Nom_attr
       )
@@ -778,9 +775,9 @@ apendice_5_PAS148 <- function(
       Promedio = mean(Nha, na.rm = T) %>% janitor::round_half_up(),
       n = n(),
       Rango = paste0(min(Nha)," - ", max(Nha)),
-      cuasivarianza = ((1-(n*(500/10000)/(rodales$Sup_ha %>% sum())))*(sd(Nha)^2/n))%>% janitor::round_half_up(2),
+      cuasivarianza = ((1-(n*(500/10000)/(rodales$Sup_ha %>% sum())))*(stats::sd(Nha)^2/n))%>% janitor::round_half_up(2),
       CV = ((sqrt(cuasivarianza)/Promedio)*100) %>% janitor::round_half_up(1),
-      T_est = qt(0.975,n-1) %>% janitor::round_half_up(3),
+      T_est = stats::qt(0.975,n-1) %>% janitor::round_half_up(3),
       E_abs = (T_est * sqrt(cuasivarianza)) %>% janitor::round_half_up(),
       E_rel = ((E_abs/Promedio)*100) %>% janitor::round_half_up(1),
       Int_conf = paste0(janitor::round_half_up(Promedio - E_abs), " - ", janitor::round_half_up(Promedio + E_abs))
@@ -821,9 +818,6 @@ apendice_5_PAS148 <- function(
 
 #' @rdname get_apendices
 #' @export
-#' @importFrom dplyr case_when
-#' @importFrom grDevices boxplot.stats
-#' @importFrom openxlsx2 wb_workbook
 apendice_5_PAS151 <- function(
     bd_flora,
     rodales,
@@ -839,7 +833,7 @@ apendice_5_PAS151 <- function(
     decimal.mark = ",",
     big.mark = "."
   )
-  wb_ap5 <- wb_workbook(theme = "Integral") %>%
+  wb_ap5 <- openxlsx2::wb_workbook(theme = "Integral") %>%
     {if(portada == "KIMAL"){
       wb_portada_kimal(., PAS = 151, apendice = 5, provincia = provincia)
     } else {
@@ -933,7 +927,7 @@ apendice_5_PAS151 <- function(
     dplyr::ungroup() %>%
     split(.$Tipo_veg) %>%
     purrr::map(function(x) {
-      out <- boxplot.stats(x$Nha)$out
+      out <- grDevices::boxplot.stats(x$Nha)$out
       x %>% dplyr::filter(!Nha %in% c(out))
     }) %>%
     dplyr::bind_rows()
@@ -1076,7 +1070,7 @@ apendice_5_PAS151 <- function(
 
   tabla_attr_rodal_final <- tabla_attr_rodal %>%
     dplyr::mutate(
-      Nom_attr = case_when(
+      Nom_attr = dplyr::case_when(
         !N_Rodal %in% unique(dplyr::bind_rows(nha_ptos, nha_est, nha_otros) %>% .$N_Rodal) ~ "Encontrar otro método de estimación",
         .default = Nom_attr
       )

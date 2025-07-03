@@ -107,13 +107,12 @@ italic_sp <- function(x){
 #' @return data.frame con densidad (ind/ha) por especie.
 #' @export
 #'
-#' @importFrom dplyr count
 nha_x_sp_fun <- function(parcelas, bd, add_var = NULL){
   bd %>%
     dplyr::select(N_Parc, Especie, Nha) %>%
     dplyr::filter(N_Parc %in% parcelas) %>%
     tidyr::complete(N_Parc, Especie, fill = list(Nha = 0)) %>%
-    dplyr::left_join(bd %>% count(Especie, dplyr::across(add_var)) %>% dplyr::select(-n)) %>%
+    dplyr::left_join(bd %>% dplyr::count(Especie, dplyr::across(add_var)) %>% dplyr::select(-n)) %>%
     dplyr::group_by(Especie, dplyr::across(add_var)) %>%
     dplyr::summarise(Nha = mean(Nha,na.rm = T) %>% janitor::round_half_up(), .groups = "drop") %>%
     dplyr::mutate_at("Nha", as.integer) %>%

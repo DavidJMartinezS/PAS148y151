@@ -6,7 +6,6 @@
 #'
 #' @noRd
 #'
-#' @importFrom shiny icon NS tagList
 mod_check_carto_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -51,7 +50,6 @@ mod_check_carto_ui <- function(id) {
 #' check_carto Server Functions
 #'
 #' @noRd
-#' @importFrom shiny moduleServer observe observeEvent req
 mod_check_carto_server <- function(id){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

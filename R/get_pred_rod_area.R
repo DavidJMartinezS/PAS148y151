@@ -25,7 +25,6 @@
 #' @export
 #' @import dataPAS
 #'
-#' @importFrom sf st_set_geometry
 get_pred_rod_area <- function(
     PAS = c(148, 149, 151),
     LB,
@@ -289,7 +288,7 @@ get_pred_rod_area <- function(
       sf::st_transform(predios, 5360)
     )))
   ) %>%
-    st_set_geometry("geometry") %>%
+    sf::st_set_geometry("geometry") %>%
     sf::st_transform(sf::st_crs(predios)) %>%
     sf::st_make_valid() %>%
     sf::st_collection_extract("POLYGON")

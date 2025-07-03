@@ -6,7 +6,6 @@
 #'
 #' @return Tabla con los atributos de rodal
 #' @export
-#' @importFrom desc desc
 get_tabla_attr_rodal <- function(PAS, bd_flora, rodales_def){
   stopifnot(PAS %in% c(148, 151))
   stopifnot(inherits(rodales_def, "sf"))
@@ -73,7 +72,7 @@ get_tabla_attr_rodal <- function(PAS, bd_flora, rodales_def){
     }) %>%
     dplyr::bind_rows() %>%
     dplyr::filter(Nha != 0) %>%
-    dplyr::arrange(Tipo_veg, desc(Nha))
+    dplyr::arrange(Tipo_veg, dplyr::desc(Nha))
 
   df <- rodales_def %>%
     dplyr::count(N_Rodal, !!!vars_tbl_attr) %>% dplyr::select(-n) %>%

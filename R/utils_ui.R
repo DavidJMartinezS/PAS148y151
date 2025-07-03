@@ -4,7 +4,6 @@
 #'
 #' @return The return value, if any, from executing the utility.
 #'
-#'
 #' @noRd
 info_dashboard <- function(){
   bsplus::bs_accordion(id = "accordion") %>%

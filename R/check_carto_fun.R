@@ -10,7 +10,6 @@
 #' @return Devuelve alguna alerta en la consola o en un modulo de shiny
 #' @export
 #'
-#' @importFrom sf st_drop_geometry
 check_carto <- function(x, id, shiny = F){
   list_check <- list(
     "Áreas" = c("Nom_Predio", "N_Area", "Tipo_Bos", "Sup_ha", "Fuente"),
@@ -30,7 +29,7 @@ check_carto <- function(x, id, shiny = F){
   stopifnot(inherits(x, "sf"))
 
   names_req <- list_check[[id]]
-  names_act <- x %>% st_drop_geometry() %>% names()
+  names_act <- x %>% sf::st_drop_geometry() %>% names()
   if((names_req %in% names_act) %>% all()){
     if((names_req == names_act) %>% all()){
       if (shiny) {

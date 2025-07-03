@@ -3,7 +3,6 @@
 #' @param request Internal parameter for `{shiny}`.
 #'     DO NOT REMOVE.
 #' @noRd
-#' @importFrom shiny column fileInput fluidRow icon numericInput tagList textInput uiOutput
 app_ui <- function(request) {
   tagList(
     # Leave this function for adding external resources
