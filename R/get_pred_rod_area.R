@@ -15,7 +15,7 @@
 #' @param cut_by_prov Logico; si es \code{TRUE}, genera las capas para la provincia indicada
 #' @param provincia Nombre de la provincia. Utilizar si `cut_by_prov` es \code{TRUE}.
 #' @param n_rodal_ord Logico; si es \code{TRUE}, ordena espacialmente los rodales, de lo contrario sigue la numeración del numero de poligono.
-#' @param orden_rodal Orden espacial para los rodales. Utilizar si `n_rodal_ord` es \code{TRUE}.
+#' @param orden_rodal Orden espacial para los rodales. Se aplica cuando `n_rodal_ord` es \code{TRUE}. Mas detalle en la documentacion de [st_order()].
 #' @param dec_sup Cantidad de decimales para la superficie en hectareas. Default `2`.
 #'
 #' @return Lista con los sf de Predios, Rodales y Areas de corta
@@ -26,49 +26,115 @@
 #' @import dataPAS
 #'
 get_pred_rod_area <- function(
-    PAS = c(148, 149, 151),
+    PAS,
     LB,
     obras,
     predios,
     suelos,
     group_by_LB = NULL,
-    sep_by_soil = T,
-    group_by_dist = F,
-    distance_max = if(group_by_dist == F) NULL,
-    cut_by_prov = F,
+    sep_by_soil = TRUE,
+    group_by_dist = FALSE,
+    distance_max = ifelse(group_by_dist == F, NULL, 50),
+    cut_by_prov = FALSE,
     provincia = NULL,
-    n_rodal_ord = F,
+    n_rodal_ord = FALSE,
     orden_rodal = "NS-OE",
-    dec_sup = 2
+    dec_sup = 2L
 ){
-  stopifnot(c(sep_by_soil, group_by_dist, cut_by_prov, n_rodal_ord) %>% is.logical())
-  stopifnot(c("Tipo_fores", "Subtipo_fo", "Tipo_veg", "Regulacion") %in% names(LB) %>% all())
-  stopifnot(c("N_Predio", "Nom_Predio") %in% names(predios) %>% all())
-  PAS <- match.arg(PAS)
+  PAS <- match.arg(as.character(PAS), choices = c(148, 149, 151))
+  valid_input(sep_by_soil, group_by_dist, cut_by_prov, n_rodal_ord, inherit = "logical")
+  valid_input(LB, obras, predios, suelos, inherit = "sf")
+  valid_input(distance_max, inherit = c("integer", "numeric", "NULL"))
+  valid_input(dec_sup, inherit = c("integer", "numeric"))
+
+  if (cut_by_prov) {
+    provincia <- match.arg(provincia, choices = unlist(provincias_list))
+  }
+  if (n_rodal_ord) {
+    orden_rodal <- match.arg(
+      orden_rodal,
+      choices = c("NS-EO","NS-OE","SN-EO","SN-OE","EO-NS","EO-SN","OE-NS","OE-SN")
+    )
+  }
+
+  LB <- LB %>%
+    dplyr::rename_all(~ ifelse(
+      . == "geometry",
+      .,
+      stringi::stri_trans_totitle(
+        stringi::stri_trans_general(., "Latin-ASCII"),
+        type = "sentence"
+      )
+    )) %>%
+    dplyr::rename_if(names(.) %>% stringi::stri_cmp_equiv("pid", strength = 1), ~ "PID") %>%
+    dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("^tipo.*for", case_insensitive = T), ~ "Tipo_fores") %>%
+    dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("^tipo.*veg", case_insensitive = T), ~ "Tipo_veg") %>%
+    dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("^sub.*tipo.*fo", case_insensitive = T), ~ "Subtipo_fo") %>%
+    dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("ley.*20283", case_insensitive = T), ~ "F_ley20283")
+  valid_input(LB, names = c("Tipo_fores", "Subtipo_fo", "Tipo_veg", "F_ley20283"))
+
+  if (!is.null(group_by_LB)) {
+    if (!all(group_by_LB %in% names(LB))) {
+      stop(sprintf(
+        "Los campos %s en 'group_by_LB' no coinciden con los de 'LB'",
+        setdiff(group_by_LB, names(LB))
+      ))
+    }
+  }
+
+  predios <- predios %>%
+    dplyr::rename_if(names(.) %>% stringi::stri_cmp_equiv("n_predio", strength = 1), ~ "N_Predio") %>%
+    dplyr::rename_if(names(.) %>% stringi::stri_cmp_equiv("nom_predio", strength = 1), ~ "Nom_Predio") %>%
+    dplyr::rename_if(names(.) %>% stringi::stri_cmp_equiv("rol", strength = 1), ~ "Rol") %>%
+    dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("^prop", case_insensitive = T), ~ "Propietari")
+  valid_input(predios, names = c("N_Predio", "Nom_Predio"))
+
+  suelos <- suelos %>%
+    dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("textcaus|clase_uso", case_insensitive = T), ~ "Clase_Uso") %>%
+    dplyr::rename_if(names(.) %>% stringi::stri_detect_regex("desceros|cat_erosio|clase_eros", case_insensitive = T), ~ "Clase_Eros")
+
+  if (PAS %in% c(148, 149)) {
+    valid_input(suelos, names = c("Clase_Uso"))
+    var_suelo <- dplyr::sym("Clase_Uso")
+  } else {
+    valid_input(suelos, names = c("Clase_Eros"))
+    var_suelo <- dplyr::sym("Clase_Eros")
+  }
+
   tipo_bos <- switch(
     as.character(PAS),
     "148" = "BN",
     "149" = "PL",
     "No aplica"
   )
-  if (PAS %in% c(148, 149)) {
-    stopifnot(c("Clase_Uso") %in% names(suelos) %>% all())
-    var_suelo <- dplyr::sym("Clase_Uso")
-  } else {
-    stopifnot(c("Clase_Eros") %in% names(suelos) %>% all())
-    var_suelo <- dplyr::sym("Clase_Eros")
+
+  f_ley <- switch(
+    as.character(PAS),
+    "148" = "bosque nativo",
+    "149" = "plantacion forestal",
+    "151" = "formacion xerofitica"
+  )
+
+  if (nrow(obras[LB,]) == 0) {
+    stop(simpleError("No existe intercepción las obras y la línea de base"))
   }
-  if (n_rodal_ord) {
-    stopifnot(orden_rodal %in% c("NS-EO","NS-OE","SN-EO","SN-OE","EO-NS","EO-SN","OE-NS","OE-SN"))
+
+  if (!any(stringi::stri_cmp_equiv(LB$F_ley20283, f_ley, strength = 1))) {
+    stop(simpleError(sprintf("No se encuentra la categoría %s en el campo 'F_ley20283'", sQuote(f_ley))))
   }
 
   if (cut_by_prov) {
-    stopifnot(provincia %in% unlist(provincias_list))
     provincia_sf <- sf::read_sf(system.file("Comunas.gdb", package = "dataPAS")) %>%
       dplyr::filter(PROVINCIA == provincia) %>%
-      sf::st_transform(sf::st_crs(predios)) %>%
+      sf::st_transform(sf::st_crs(LB)) %>%
       sf::st_make_valid() %>%
       sf::st_collection_extract("POLYGON")
+    LB <- LB[provincia_sf, ]
+    if (nrow(LB) == 0) {
+      stop(simpleError(
+      "Provincia seleccionada fuera de los límites del área de de proyecto.
+      Intente nuevamente con otra provincia", call = F))
+    }
     obras <- obras %>%
       sf::st_intersection(sf::st_union(provincia_sf)) %>%
       sf::st_collection_extract("POLYGON") %>%
@@ -79,45 +145,33 @@ get_pred_rod_area <- function(
       sf::st_collection_extract("POLYGON") %>%
       sf::st_make_valid() %>%
       sf::st_collection_extract("POLYGON")
-    LB <- LB[provincia_sf, ] %>%
-      {if (is.null(group_by_LB) & !("PID" %in% names(.))) tibble::rowid_to_column(., "PID") else .}
     predios <- predios[provincia_sf, ]
-  } %>% suppressWarnings() %>% suppressMessages()
+  } %>%
+    suppressWarnings() %>% suppressMessages()
+
+  LB <- LB %>% {if (is.null(group_by_LB) & !("PID" %in% names(.))) tibble::rowid_to_column(., "PID") else .}
 
   group_list <- c("N_Predio", "Nom_Predio", "Tipo_fores") %>%
     {if (!is.null(group_by_LB)) c(., group_by_LB) %>% unique() else .} %>%
     dplyr::syms()
 
   areas <- LB %>%
-    {if (PAS == 148){
-      .[] %>%
-        dplyr::filter(
-          Regulacion %>%
-            stringi::stri_replace_all_regex("\\s+", " ") %>%
-            stringi::stri_trim() %>%
-            stringi::stri_cmp_equiv("bosque nativo", strength = 1)
-        )
-    } else if (PAS == 149){
-      .[] %>%
-        dplyr::filter(
-          Regulacion %>%
-            stringi::stri_replace_all_regex("\\s+", " ") %>%
-            stringi::stri_trim() %>%
-            stringi::stri_cmp_equiv("plantacion forestal", strength = 1)
-        )
-    } else if (PAS == 151) {
-      .[] %>%
-        dplyr::filter(
-          Regulacion %>%
-            stringi::stri_replace_all_regex("\\s+", " ") %>%
-            stringi::stri_trim() %>%
-            stringi::stri_cmp_equiv("formacion xerofitica", strength = 1)
-        )
-    }} %>%
+    dplyr::filter(
+      F_ley20283 %>%
+        stringi::stri_replace_all_regex("\\s+", " ") %>%
+        stringi::stri_trim() %>%
+        stringi::stri_cmp_equiv(f_ley, strength = 1)
+    ) %>%
+    {if (nrow(.) == 0) {
+      stop(simpleError(sprintf("No se halló la categoría de %s dentro de la provincia ingresada", sQuote(f_ley))))
+    } else .[]} %>%
     sf::st_intersection(sf::st_union(obras)) %>%
     sf::st_collection_extract("POLYGON") %>%
     sf::st_make_valid() %>%
     sf::st_collection_extract("POLYGON") %>%
+    {if (nrow(.) == 0) {
+      stop(simpleError(sprintf("No se halló %s a intervenir", sQuote(f_ley))))
+    } else .[]} %>%
     my_union(predios %>% dplyr::select(N_Predio, Nom_Predio)) %>%
     sf::st_collection_extract("POLYGON") %>%
     sf::st_cast("POLYGON") %>%
@@ -134,16 +188,16 @@ get_pred_rod_area <- function(
     {if (is.null(group_by_LB)){
       .[] %>%
         {if (n_rodal_ord) {
-          dplyr::group_by(., PID, N_Rodal, Regulacion, N_Predio, Nom_Predio, Tipo_fores, Subtipo_fo, Tipo_veg)
+          dplyr::group_by(., PID, N_Rodal, F_ley20283, N_Predio, Nom_Predio, Tipo_fores, Subtipo_fo, Tipo_veg)
         } else {
-          dplyr::group_by(., PID, Regulacion, N_Predio, Nom_Predio, Tipo_fores, Subtipo_fo, Tipo_veg)
+          dplyr::group_by(., PID, F_ley20283, N_Predio, Nom_Predio, Tipo_fores, Subtipo_fo, Tipo_veg)
         }} %>%
         dplyr::summarise(geometry = sf::st_union(geometry)) %>%
         dplyr::ungroup() %>%
         sf::st_collection_extract("POLYGON")
     } else {
       .[] %>%
-        dplyr::group_by(Regulacion, !!!group_list) %>%
+        dplyr::group_by(F_ley20283, !!!group_list) %>%
         dplyr::summarise(geometry = sf::st_union(geometry)) %>%
         dplyr::ungroup() %>%
         sf::st_collection_extract("POLYGON") %>%
@@ -151,7 +205,11 @@ get_pred_rod_area <- function(
         tibble::rowid_to_column("PID") %>%
         {if (!c("Subtipo_fo", "Tipo_veg") %in% group_list %>% all()){
           .[] %>%
-            sf::st_join(LB %>% dplyr::select(c("Subtipo_fo", "Tipo_veg")[!c("Subtipo_fo", "Tipo_veg") %in% group_list]), largest = T)
+            sf::st_join(
+              LB %>%
+                dplyr::select(c("Subtipo_fo", "Tipo_veg")[!c("Subtipo_fo", "Tipo_veg") %in% group_list]),
+              largest = T
+            )
         } else .}
     }} %>%
     {if ("N_Rodal" %in% names(.)) {
@@ -187,7 +245,7 @@ get_pred_rod_area <- function(
     ) %>%
     dplyr::arrange(N_Rodal) %>%
     dplyr::mutate_at(dplyr::vars(Nom_Predio), tidyr::replace_na, "S/I") %>%
-    dplyr::select(N_Predio, Nom_Predio, PID, N_Rodal, Tipo_Bos, Tipo_For, Tipo_fores, Subtipo_fo, Tipo_veg, Regulacion, Sup_ha) %>%
+    dplyr::select(N_Predio, Nom_Predio, PID, N_Rodal, Tipo_Bos, Tipo_For, Tipo_fores, Subtipo_fo, Tipo_veg, F_ley20283, Sup_ha) %>%
     suppressWarnings() %>% suppressMessages()
 
   if (any(Rodales %>%  dplyr::group_by(N_Rodal) %>%  dplyr::summarise_at("Sup_ha", sum) %>% .$Sup_ha < 0.5) & PAS == 148) {

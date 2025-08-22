@@ -27,8 +27,7 @@ mod_downfiles_ui <- function(id, style = "material-circle", icon = "download", s
 mod_downfiles_server <- function(id, x, name_save){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
-    shinyjs::disable("downfile_bttn")
-    observe({if (isTruthy(x)) shinyjs::enable("downfile_bttn")})
+    if (isTruthy(x)) shinyjs::enable("downfile_bttn") else shinyjs::disable("downfile_bttn")
 
     filetype <- reactive({
       x %>%
@@ -39,7 +38,7 @@ mod_downfiles_server <- function(id, x, name_save){
           ifelse(
             inherits(., "sf"),
             "sf",
-            ifelse(inherits(., "data.frame") & !inherits(., "sf"), "xlsx", "")
+            ifelse(inherits(., "data.frame"), "xlsx", "")
           )
         )) %>%
         {if(length(.) == 1) unlist(.) else .}
@@ -73,7 +72,7 @@ mod_downfiles_server <- function(id, x, name_save){
             )
           }
         )
-        list_files <- unname(unlist(map(unlist(name_save), function(x){list.files(pattern = x)})))
+        list_files <- unname(unlist(purrr::map(unlist(name_save), function(x){list.files(pattern = x)})))
         if(tools::file_ext(file) == "zip") {
           zip::zip(zipfile = file, files = list_files)
         } else {

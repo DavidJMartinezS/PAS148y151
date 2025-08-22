@@ -5,12 +5,11 @@
 #'
 #' @param x Objeto sf.
 #' @param id Nombre de la capa.
-#' @param shiny Logico; si es \code{TRUE}, devuelve una alerta en un modulo de shiny.
 #'
 #' @return Devuelve alguna alerta en la consola o en un modulo de shiny
 #' @export
 #'
-check_carto <- function(x, id, shiny = F){
+check_carto <- function(x, id){
   list_check <- list(
     "Áreas" = c("Nom_Predio", "N_Area", "Tipo_Bos", "Sup_ha", "Fuente"),
     "Caminos" = c("Nom_Predio", "Tipo_Cam", "Fuente"),
@@ -25,8 +24,10 @@ check_carto <- function(x, id, shiny = F){
     "Suelos" = c("Nom_Predio", "Clase_Uso", "Sup_ha", "Fuente"),
     "Uso actual" = c("Nom_Predio", "Uso_Actual", "Sup_ha", "Fuente")
   )
-  stopifnot(id %in% names(list_check))
-  stopifnot(inherits(x, "sf"))
+  id <- match.arg(id, choices = names(list_check))
+  valid_input(x, inherit = "sf")
+
+  shiny <- isRunning()
 
   names_req <- list_check[[id]]
   names_act <- x %>% sf::st_drop_geometry() %>% names()

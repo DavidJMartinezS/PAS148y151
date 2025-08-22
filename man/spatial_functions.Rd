@@ -13,7 +13,7 @@ my_union(x, y)
 
 get_slope(dem, x)
 
-st_order(x, order = "NS-OE")
+st_order(x, order = "NS-OE", progress = T)
 }
 \arguments{
 \item{x, y}{Objeto sf.}
@@ -22,7 +22,9 @@ st_order(x, order = "NS-OE")
 
 \item{dem}{Digital Elevation Model. Puede ser un objeto SpatRaster o bien la ruta de la imagen.}
 
-\item{order}{Orden espacial.}
+\item{order}{Orden espacial. see `details`.}
+
+\item{progress}{Valor logico. \code{TRUE} para que se mostrar una barra de progreso en la consola.}
 }
 \value{
 Objetos sf o numeros
@@ -32,4 +34,7 @@ Objetos sf o numeros
 `my_union` regresa la union de dos capas, se crucen o no las geometrias.
 `get_slope` regresa la pendiente media.
 `st_order` crea un orden espacial del objeto sf ingresado.
+}
+\details{
+El argumento `order` consiste en una combinacion de 4 letras con las iniciales de los 4 puntos cardinales (N, S, E, O) separadas con un guión segun si es latitud o longitud. Por ejemplo, eel argumento por default tiene un orden \code{'NS-OE'}, lo cual indica que que se seguira un orden de Norte a Sur primeramente y de Oste a Este de manera secundaria.
 }

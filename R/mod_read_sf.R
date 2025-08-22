@@ -1,12 +1,12 @@
-#' leer_sf UI Function
+#' read_sf UI Function
 #'
-#' @description A shiny Module.
+#' @description A shiny Module for read shp file.
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
 #' @noRd
 #'
-mod_leer_sf_ui <- function(id, ...) {
+mod_read_sf_ui <- function(id, ...) {
   ns <- NS(id)
   shiny::fileInput(
     ns("sf_file"),
@@ -18,10 +18,10 @@ mod_leer_sf_ui <- function(id, ...) {
   )
 }
 
-#' leer_sf Server Functions
+#' read_sf Server Functions
 #'
 #' @noRd
-mod_leer_sf_server <- function(id, crs = NULL, fx = NULL, path = F, ...){
+mod_read_sf_server <- function(id, crs = NULL, fx = NULL, path = F, ...){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
     reactive({
@@ -48,7 +48,7 @@ mod_leer_sf_server <- function(id, crs = NULL, fx = NULL, path = F, ...){
             sf::st_zm() %>%
             sf::st_make_valid() %>%
             {if (!is.null(fx)) .[] %>% fx() else .} %>%
-            {if (!is.null(crs)) .[] %>% st_transform(crs) else .}
+            {if (!is.null(crs)) .[] %>% sf::st_transform(crs) else .}
           return(shp)
         }
       }
@@ -57,7 +57,7 @@ mod_leer_sf_server <- function(id, crs = NULL, fx = NULL, path = F, ...){
 }
 
 ## To be copied in the UI
-# mod_leer_sf_ui("leer_sf_1")
+# mod_read_sf_ui("read_sf_1")
 
 ## To be copied in the server
-# mod_leer_sf_server("leer_sf_1")
+# mod_read_sf_server("read_sf_1")

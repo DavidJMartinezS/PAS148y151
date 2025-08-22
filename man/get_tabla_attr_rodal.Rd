@@ -4,18 +4,23 @@
 \alias{get_tabla_attr_rodal}
 \title{Tabla atributos de rodal}
 \usage{
-get_tabla_attr_rodal(PAS, bd_flora, rodales_def)
+get_tabla_attr_rodal(PAS, bd_flora, rodales, umbral_sp_est = 0.05)
 }
 \arguments{
 \item{PAS}{PAS correspondiente. Ingresar `148` o `151`.}
 
 \item{bd_flora}{Base de datos de parcelas dentro de los rodales.}
 
-\item{rodales_def}{Objeto sf con poligono de rodales.}
+\item{rodales}{Objeto sf con poligono de rodales.}
+
+\item{umbral_sp_est}{Porcentaje de representividad minimo de una especie cuya densidad se va a estimar. default \code{0.05}.}
 }
 \value{
 Tabla con los atributos de rodal
 }
 \description{
 Tabla atributos de rodal
+}
+\seealso{
+[apendice_5_PAS148()], [apendice_5_PAS151()], [apendice_5_PAS151_nuevo()]
 }

@@ -29,7 +29,7 @@ golem::fill_desc(
     role = c("aut", "cre") # Your role (here author/creator)
   ),
   repo_url = NULL, # The URL of the GitHub repo (optional),
-  pkg_version = "0.0.0.9000", # The version of the package containing the app
+  pkg_version = "0.0.1.0000", # The version of the package containing the app
   set_options = TRUE # Set the global golem options
 )
 

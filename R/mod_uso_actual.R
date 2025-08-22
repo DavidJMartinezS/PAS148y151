@@ -18,13 +18,13 @@ mod_uso_actual_ui <- function(id) {
       )
     ),
     tags$div(style = "margin-top: 10px"),
-    mod_leer_sf_ui(ns("predios"), "Ingresar capa de predios") %>%
+    mod_read_sf_ui(ns("predios"), "Ingresar capa de predios") %>%
       add_help_text(title = "Campos minimos requeridos:\n'N_Predio', Nom_Predio'"),
     tags$div(style = "margin-top: -10px"),
-    mod_leer_sf_ui(ns("catastro"), "Ingresar capa de catastro de CONAF") %>%
+    mod_read_sf_ui(ns("catastro"), "Ingresar capa de catastro de CONAF") %>%
       add_help_text(title = "Campos minimos requeridos:\n'USO', 'SUBUSO', 'ESTRUCTURA'"),
     tags$div(style = "margin-top: -10px"),
-    mod_leer_sf_ui(ns("suelos"), "Ingresar capa de suelos de CIREN") %>%
+    mod_read_sf_ui(ns("suelos"), "Ingresar capa de suelos de CIREN") %>%
       add_help_text(title = "Campos minimos requeridos:\n'TEXTCAUSo o Clase_Uso'"),
     tags$div(style = "margin-top: -10px"),
     tags$div(
@@ -51,12 +51,12 @@ mod_uso_actual_server <- function(id, crs, dec_sup){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
-    predios <- mod_leer_sf_server(
+    predios <- mod_read_sf_server(
       id = "predios",
       crs = crs
     )
     catastro <- eventReactive(predios(),{
-      mod_leer_sf_server(
+      mod_read_sf_server(
         id = "catastro",
         crs = crs(),
         fx = function(x){
@@ -83,7 +83,7 @@ mod_uso_actual_server <- function(id, crs, dec_sup){
     })
 
     suelos <- eventReactive(predios(), {
-      mod_leer_sf_server(
+      mod_read_sf_server(
         id = "suelos",
         crs = crs(),
         fx = function(x){

@@ -17,16 +17,9 @@
 \alias{get_carto_digital}
 \title{Cartografia digital}
 \usage{
-cart_rodales(
-  PAS,
-  rodales,
-  TipoFor_num = NULL,
-  from_RCA = F,
-  RCA = NULL,
-  dec_sup = 2
-)
+cart_rodales(PAS, rodales, from_RCA = F, RCA = NULL, dec_sup = 2L)
 
-cart_area(PAS, areas, dec_sup = 2, from_RCA = F, RCA = NULL)
+cart_area(PAS, areas, dec_sup = 2L, from_RCA = F, RCA = NULL)
 
 cart_suelos(PAS, areas, dec_sup = 2, from_RCA = F, RCA = NULL)
 
@@ -40,7 +33,7 @@ cart_uso_actual(predios, catastro, suelos, dec_sup = 2)
 
 cart_hidro(
   predios,
-  fuente_hidro,
+  fuente_hidro = c("MOP", "BCN"),
   cut = c("clip", "buffer", "crop", "crop_by_row"),
   buffer = 0
 )
@@ -75,38 +68,35 @@ get_carto_digital(
   PAS,
   areas,
   rodales,
-  TipoFor_num = T,
   predios,
-  cut_by_prov,
   dem,
-  add_parcelas = F,
+  cut_by_prov = NULL,
+  add_parcelas = FALSE,
   bd_flora = NULL,
-  cut_by_rod,
-  include_fp,
-  from_RCA = F,
+  cut_by_rod = F,
+  include_fp = FALSE,
+  from_RCA = FALSE,
   RCA = NULL,
-  add_uso_actual = F,
+  add_uso_actual = FALSE,
   catastro = NULL,
   suelos = NULL,
-  add_caminos = F,
-  add_caminos_osm = F,
+  add_caminos = FALSE,
+  add_caminos_osm = FALSE,
   caminos_arg = list(cut = "clip", buffer = 0),
-  add_hidro = F,
-  fuente_hidro = NULL,
-  add_hidro_osm = F,
+  add_hidro = FALSE,
+  fuente_hidro = c("MOP", "BCN"),
+  add_hidro_osm = FALSE,
   hidro_arg = list(cut = "clip", buffer = 0),
-  add_curv_niv = F,
+  add_curv_niv = FALSE,
   curv_niv_arg = list(cut = "clip", buffer = 0),
   step = 10,
   dec_sup = 2
 )
 }
 \arguments{
-\item{PAS}{PAS correspondiente. Ingresar `148` o `151`.}
+\item{PAS}{PAS correspondiente. Ingresar \code{148} o \code{151}.}
 
 \item{rodales}{Objeto sf con los rodales de las areas de corta.}
-
-\item{TipoFor_num}{Logico; si es \code{TRUE} declara que el campo `Tipo_For` esta con el codigo numerico.}
 
 \item{from_RCA}{Logico; \code{TRUE} si la capa probiene de una RCA aprobada. Default \code{FALSE}.}
 
@@ -120,7 +110,13 @@ get_carto_digital(
 
 \item{predios}{Objeto sf con los predios de las areas de corta.}
 
-\item{bd_flora}{Base de datos de flora. Incluir si `add_parcelas` es \code{TRUE.}.}
+\item{cut_by_prov}{Cortar predios por provincia.}
+
+\item{bd_flora}{Base de datos de flora. Incluir si `add_parcelas` es \code{TRUE}.}
+
+\item{cut_by_rod}{Seleccionar parcelas dentro de rodales.}
+
+\item{include_fp}{Incluir especies fuera de parcela. Incluye ademas especies cuya `Cob_BB` sea \code{NA} o \code{---}.}
 
 \item{catastro}{Objeto sf del catastro de CONAF.}
 

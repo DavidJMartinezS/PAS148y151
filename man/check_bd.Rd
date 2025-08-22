@@ -2,16 +2,20 @@
 % Please edit documentation in R/check_bd.R
 \name{check_bd_flora}
 \alias{check_bd_flora}
+\alias{check_bd_pcob}
+\alias{check_bd_trans}
 \title{Chequeo Bases de Datos}
 \usage{
-check_bd_flora(x, y = NULL)
+check_bd_flora(x, mask = NULL)
+
+check_bd_pcob(x, mask = NULL)
+
+check_bd_trans(x, mask = NULL)
 }
 \arguments{
-\item{x}{Base de datos de flora}
+\item{x}{Base de datos}
 
-\item{y}{Capa mascara para filtrar las parcelas}
-
-\item{shiny}{Logico; si es \code{TRUE}, devuelve una alerta en un modulo de shiny.}
+\item{mask}{Capa mascara para filtrar las parcelas}
 }
 \value{
 Devuelve alertas impresas en la consola o bien en modulos de shiny.

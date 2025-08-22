@@ -15,7 +15,7 @@ mod_st_order_ui <- function(id) {
       tags$span("Lee un shapefile y crea un campo 'ID_ord' con el orden espacial que indique.")
     ),
     tags$div(style = "margin-top: 10px"),
-    mod_leer_sf_ui(ns("sf_order"), "Ingrese Shapefile que desea ordenar"),
+    mod_read_sf_ui(ns("sf_order"), "Ingrese Shapefile que desea ordenar"),
     tags$div(style = "margin-top: -10px"),
     shinyWidgets::pickerInput(
       inputId = ns("orden"),
@@ -52,8 +52,9 @@ mod_st_order_ui <- function(id) {
 mod_st_order_server <- function(id){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
-    shp_to_order <- mod_leer_sf_server("sf_order")
-    shp_to_order_name <- mod_leer_sf_server("sf_order", path = T)
+    shp_ordered <- reactiveVal(NULL)
+    shp_to_order <- mod_read_sf_server("sf_order")
+    shp_to_order_name <- mod_read_sf_server("sf_order", path = T)
 
     observeEvent(shp_to_order(),{
       shinyWidgets::updatePickerInput(
@@ -90,11 +91,45 @@ mod_st_order_server <- function(id){
           )
         )
       )
-      req(shp_ordered())
+      on.exit({
+        shinybusy::remove_modal_spinner()
+      }, add = TRUE)
+      shp_ordered(tryCatch({
+        shp_to_order() %>%
+          {if(!is.null(input$select_field_order)) dplyr::group_by(., !!!dplyr::syms(input$select_field_order)) else .} %>%
+          dplyr::mutate(ID_ord = st_order(geometry, order = input$orden))
+      }, error= function(e) {
+        shinyalert::shinyalert(
+          title = "Error al ordenar el shapefile!",
+          text = as.character(e$message),
+          html = TRUE,
+          type = "error",
+          closeOnEsc = T,
+          showConfirmButton = T,
+          confirmButtonCol = "#6FB58F",
+          animation = T
+        )
+        return(NULL)
+      }))
+      if (!is.null(carto_digital())) {
+        shinybusy::notify_success(
+          text = "¡Listo! Shapefile ordenado.",
+          timeout = 3000, position = "right-bottom"
+        )
+      }
       gc(reset = T)
-      shinybusy::remove_modal_spinner()
-      shinybusy::notify_success("Shapefile ordenado!", timeout = 3000, position = "right-bottom")
-      mod_downfiles_server(id = "down_sf_ordered", x = shp_ordered(), name_save = paste0(shp_to_order_name(),"_ord"))
+      mod_downfiles_server(
+        id = "down_sf_ordered",
+        x = shp_ordered(),
+        name_save = paste0(shp_to_order_name(),"_ord")
+      )
+    })
+    observe({
+      if (isTruthy(shp_ordered())){
+        shinyjs::enable("down_sf_ordered-downfile_bttn")
+      } else {
+        shinyjs::disable("down_sf_ordered-downfile_bttn")
+      }
     })
   })
 }

@@ -5,20 +5,20 @@
 \title{get_pred_rod_area}
 \usage{
 get_pred_rod_area(
-  PAS = c(148, 149, 151),
+  PAS,
   LB,
   obras,
   predios,
   suelos,
   group_by_LB = NULL,
-  sep_by_soil = T,
-  group_by_dist = F,
-  distance_max = if (group_by_dist == F) NULL,
-  cut_by_prov = F,
+  sep_by_soil = TRUE,
+  group_by_dist = FALSE,
+  distance_max = ifelse(group_by_dist == F, NULL, 50),
+  cut_by_prov = FALSE,
   provincia = NULL,
-  n_rodal_ord = F,
+  n_rodal_ord = FALSE,
   orden_rodal = "NS-OE",
-  dec_sup = 2
+  dec_sup = 2L
 )
 }
 \arguments{
@@ -46,7 +46,7 @@ get_pred_rod_area(
 
 \item{n_rodal_ord}{Logico; si es \code{TRUE}, ordena espacialmente los rodales, de lo contrario sigue la numeración del numero de poligono.}
 
-\item{orden_rodal}{Orden espacial para los rodales. Utilizar si `n_rodal_ord` es \code{TRUE}.}
+\item{orden_rodal}{Orden espacial para los rodales. Se aplica cuando `n_rodal_ord` es \code{TRUE}. Mas detalle en la documentacion de [st_order()].}
 
 \item{dec_sup}{Cantidad de decimales para la superficie en hectareas. Default `2`.}
 }

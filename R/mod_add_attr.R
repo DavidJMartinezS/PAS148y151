@@ -19,7 +19,7 @@ mod_add_attr_ui <- function(id) {
       )
     ),
     tags$div(style = "margin-top: 10px"),
-    mod_leer_sf_ui(ns("sf_to_attr"),"Ingrese Shapefile al cual añadir los atributos"),
+    mod_read_sf_ui(ns("sf_to_attr"),"Ingrese Shapefile al cual añadir los atributos"),
     tags$div(style = "margin-top: -10px"),
     shinyWidgets::materialSwitch(
       inputId = ns("add_pend_info"),
@@ -60,8 +60,8 @@ mod_add_attr_server <- function(id, PAS){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
-    shp <- mod_leer_sf_server("sf_to_attr")
-    shp_name <- mod_leer_sf_server("sf_to_attr", path = T)
+    shp <- mod_read_sf_server("sf_to_attr")
+    shp_name <- mod_read_sf_server("sf_to_attr", path = T)
 
     # rangos pendiene
     observeEvent(input$add_pend_info,{
@@ -89,7 +89,7 @@ mod_add_attr_server <- function(id, PAS){
         if(input$add_hidro_info){
           tags$div(
             id = "flex",
-            mod_leer_sf_ui(ns("hidro"), "Ingresar capa hidrográfica", width = "50%"),
+            mod_read_sf_ui(ns("hidro"), "Ingresar capa hidrográfica", width = "50%"),
             tags$div(style = "margin-left: 10px"),
             shinyWidgets::pickerInput(
               inputId = ns("campos"),
@@ -103,9 +103,11 @@ mod_add_attr_server <- function(id, PAS){
         }
       })
     })
-    hidro <- mod_leer_sf_server(id = "hidro", crs = sf::st_crs(shp()))
+    hidro <- mod_read_sf_server(id = "hidro", crs = sf::st_crs(shp()), fx = function(x){
+      x %>% {if(!"ID" %in% names(x)) tibble::rowid_to_column(., "ID") else .}
+    })
     observeEvent(hidro(),{
-      shinyWidgets:updatePickerInput(
+      shinyWidgets::updatePickerInput(
         session = session,
         inputId = "campos",
         choices = hidro() %>% sf::st_drop_geometry() %>% names()
@@ -161,7 +163,7 @@ mod_add_attr_server <- function(id, PAS){
             ) %>%
             dplyr::bind_cols(
               hidro()[sf::st_nearest_feature(shp(), sf::st_geometry(hidro())),] %>%
-                select(!!!dplyr::syms(input$campos)) %>%
+                dplyr::select(!!!dplyr::syms(input$campos)) %>%
                 sf::st_drop_geometry()
             )
         } else .} %>%

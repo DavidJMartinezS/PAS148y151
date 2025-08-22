@@ -4,14 +4,12 @@
 \alias{check_carto}
 \title{Check cartography}
 \usage{
-check_carto(x, id, shiny = F)
+check_carto(x, id)
 }
 \arguments{
 \item{x}{Objeto sf.}
 
 \item{id}{Nombre de la capa.}
-
-\item{shiny}{Logico; si es \code{TRUE}, devuelve una alerta en un modulo de shiny.}
 }
 \value{
 Devuelve alguna alerta en la consola o en un modulo de shiny

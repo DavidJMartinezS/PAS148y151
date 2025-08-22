@@ -20,7 +20,7 @@ attachment::att_amend_desc()
 
 ## Add modules ----
 ## Create a module infrastructure in R/
-golem::add_module(name = "leer_sf") # Name of the module
+golem::add_module(name = "read_sf") # Name of the module
 golem::add_module(name = "downfiles") # Name of the module
 golem::add_module(name = "header_config")
 golem::add_utils("server")
@@ -38,10 +38,13 @@ golem::add_module("bd_flora")
 golem::add_module("tabla_attr_rodal")
 golem::add_module("check_input")
 golem::add_module("uso_actual")
+golem::add_module("tabla_obras")
+golem::add_module("tabla_fauna")
 
 
 usethis::use_pipe(export = T)
 usethis::use_package('bsplus')
+usethis::use_package('kableExtra')
 usethis::use_package('dplyr')
 usethis::use_package('dataPAS')
 usethis::use_package('flexlsx')
@@ -50,6 +53,7 @@ usethis::use_package('ftExtra')
 usethis::use_package('fresh')
 usethis::use_package('igraph')
 usethis::use_package('janitor')
+usethis::use_package('magick')
 usethis::use_package('openxlsx2')
 usethis::use_package('osmdata')
 usethis::use_package('purrr')
@@ -62,7 +66,7 @@ usethis::use_package('shinydashboardPlus')
 usethis::use_package('shinyEffects')
 usethis::use_package('shinyjs')
 usethis::use_package('shinyWidgets')
-usethis::use_package('stringr')
+usethis::use_package('stringdist')
 usethis::use_package('stringi')
 usethis::use_package('terra')
 usethis::use_package('tibble')
@@ -71,11 +75,6 @@ usethis::use_package('tools')
 usethis::use_package('units')
 usethis::use_package('writexl')
 usethis::use_package('zip')
-
-archivo <- "~/R/PAS148y151/R/utils_ui.R"
-contenido <- readLines(archivo, encoding = "UTF-8")
-contenido_escapado <- sapply(contenido, function(line) paste0(escape_non_ascii(line), collapse = ""))
-writeLines(contenido_escapado, "~/R/NOT-ASCII/utils_ui.R", useBytes = TRUE)
 
 ## Add helper functions ----
 ## Creates fct_* and utils_*

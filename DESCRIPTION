@@ -1,6 +1,6 @@
 Package: PAS148y151
 Title: Dashboard para elaborar PAS 148 y 151
-Version: 0.0.0.9000
+Version: 0.0.1.0000
 Authors@R: 
     person("David", "Martínez Sánchez", , "david.tinez1@gmail.com", role = c("aut", "cre"))
 Description: Paquete realizado para elaborar cartografía y apéndices de
@@ -19,6 +19,8 @@ Imports:
     grDevices,
     igraph,
     janitor,
+    kableExtra,
+    magick,
     magrittr,
     openxlsx2,
     osmdata,
@@ -34,6 +36,7 @@ Imports:
     shinyjs,
     shinyWidgets,
     stats,
+    stringdist,
     stringi,
     terra,
     tibble,

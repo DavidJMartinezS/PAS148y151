@@ -126,17 +126,16 @@ info_dashboard <- function(){
     )
 }
 
-#' @noRd
-info_cut_buffer <- function(){
-  bsplus::bs_carousel(id = "hidro_example", use_indicators = T, use_controls = T) %>%
-    bsplus::bs_set_data(interval = FALSE) %>%
-    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/clip.png")) %>%
-    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/buffer_2000.png")) %>%
-    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop.png")) %>%
-    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop_2000.png")) %>%
-    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop_by_row.png")) %>%
-    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop_by_row_2000.png"))
-}
+# info_cut_buffer <- function(){
+#   bsplus::bs_carousel(id = "hidro_example", use_indicators = T, use_controls = T) %>%
+#     bsplus::bs_set_data(interval = FALSE) %>%
+#     bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/clip.png")) %>%
+#     bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/buffer_2000.png")) %>%
+#     bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop.png")) %>%
+#     bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop_2000.png")) %>%
+#     bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop_by_row.png")) %>%
+#     bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop_by_row_2000.png"))
+# }
 
 #' @noRd
 add_help_text <- function(x, ...){
@@ -168,4 +167,89 @@ mytheme <- fresh::create_theme(
     box_bg = "#FFFFFF",
     info_box_bg = "#FFFFFF"
   )
+)
+
+#' @noRd
+modal_info_cut_buffer <- bsplus::bs_modal(
+  id = "ayuda_info_cut_buffer",
+  title = tags$h4("Porcentaje umbral", style = "font-weight: bold;"),
+  body = bsplus::bs_carousel(id = "hidro_example", use_indicators = T, use_controls = T) %>%
+    bsplus::bs_set_data(interval = FALSE) %>%
+    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/clip.png")) %>%
+    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/buffer_2000.png")) %>%
+    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop.png")) %>%
+    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop_2000.png")) %>%
+    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop_by_row.png")) %>%
+    bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/crop_by_row_2000.png")),
+  footer = tags$span(
+    bsplus::bs_modal_closebutton("OK") %>% tagAppendAttributes(class = "btn-success")
+  ),
+  size = "large"
+)
+
+#' @noRd
+modal_umbral_sp_est <- bsplus::bs_modal(
+  id = "ayuda_umbral_sp_est",
+  title = tags$h4("Porcentaje umbral", style = "font-weight: bold;"),
+  body = tags$div(
+    tags$p(
+      "Porcentaje de representividad mínimo que debe tener una especie cuya
+      densidad se va a estimar para que esta pueda ser considerada.",
+      rep_br(2),
+      "Por ejemplo, al estimar la densidad por especie de un tipo vegetacional
+      en particular y calcular el porcentaje de representatividad de cada especie,
+      tendríamos lo siguiente:",
+      data.frame(
+        Especie = c("Kageneckia oblonga", "Lithraea caustica", "Escallonia pulverulenta", "Quillaja saponaria"),
+        Nha = c(310, 70, 40, 10)
+      ) %>%
+        dplyr::mutate(Porcentaje = janitor::round_half_up(Nha/sum(Nha), 2)) %>%
+        kableExtra::kbl(caption = "Bosque nativo de Kageneckia oblonga") %>%
+        kableExtra::kable_styling() %>%
+        shiny::HTML(),
+      "Si se llegase a establecer un umbral del 5%, la estimación solo incluiría
+      las especies cuyo porcentaje sea igual o superior al umbral, excluyendo así a",
+      tags$em("'Quillaja saponaria'"), "de la estimación.",
+      data.frame(
+        Especie = c("Kageneckia oblonga", "Lithraea caustica", "Escallonia pulverulenta", "Quillaja saponaria"),
+        Nha = c(310, 70, 40, 10)
+      ) %>%
+        dplyr::mutate(Porcentaje = janitor::round_half_up(Nha/sum(Nha), 2)) %>%
+        kableExtra::kbl(caption = "Bosque nativo de Kageneckia oblonga") %>%
+        kableExtra::kable_styling() %>%
+        kableExtra::row_spec(row = 4, bold = T, color = "red") %>%
+        shiny::HTML()
+    ),
+  ),
+  footer = tags$span(
+    bsplus::bs_modal_closebutton("OK") %>% tagAppendAttributes(class = "btn-success")
+  ),
+  size = "medium"
+)
+
+#' @noRd
+modal_cov_fp <- bsplus::bs_modal(
+  id = "ayuda_cov_fp",
+  title = tags$h4("Cobertura especies fp", style = "font-weight: bold;"),
+  body = tags$div(
+    tags$p(
+      "Cobertura en porcentaje (%) que se asignará a las especies que estén fuera de
+      parcela (fp) de acuerdo con la clasificación de cobertura de Braun Blanquet.",
+      rep_br(2),
+      "Esto aplica igualmente a cualquier otra clasificación distinta a la establecida
+      en Geobiota, la cual se presenta a continuación:",
+      data.frame(
+        Especie = c("fp", "r", "+", "1", "2", "3", "4", "5", "6", "otros\n(ej: '---', NA)"),
+        Cobertura_numero = c("por definir", "1", "3", "5", "7,5", "17,5", "37,5", "62,5", "87,5", "por definir"),
+        Cobertura_rango = c("por definir", "1", "3", "<5", "5-10", "10-25", "25-50", "50-75", "75-100", "por definir")
+      ) %>%
+        kableExtra::kbl(align = "c") %>%
+        kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+        shiny::HTML()
+    )
+  ),
+  footer = tags$span(
+    bsplus::bs_modal_closebutton("OK") %>% tagAppendAttributes(class = "btn-success")
+  ),
+  size = "medium"
 )

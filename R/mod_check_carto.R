@@ -14,11 +14,11 @@ mod_check_carto_ui <- function(id) {
       icon("circle-info"),
       tags$span(
         "Lee un shapefile de la cartografia digital, y chequea si tiene los
-        campos y el orden de éstos de acuerdo con los requerimientos técnicos de CONAF."
+        campos y el orden de estos de acuerdo con los requerimientos técnicos de CONAF."
       )
     ),
     tags$div(style = "margin-top: 10px"),
-    mod_leer_sf_ui(ns("sf_check"),"Ingrese Shapefile"),
+    mod_read_sf_ui(ns("sf_check"),"Ingrese Shapefile"),
     tags$div(style = "margin-top: -10px"),
     shinyWidgets::pickerInput(
       inputId = ns("select_sf_check"),
@@ -54,7 +54,7 @@ mod_check_carto_server <- function(id){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
-    shp_check <- mod_leer_sf_server("sf_check")
+    shp_check <- mod_read_sf_server("sf_check")
 
     shinyjs::disable("check_carto")
     observe({
@@ -64,7 +64,7 @@ mod_check_carto_server <- function(id){
 
     observeEvent(input$check_carto,{
       req(shp_check(), input$select_sf_check)
-      check_carto(x = shp_check(), id = input$select_sf_check, shiny = T)
+      check_carto(x = shp_check(), id = input$select_sf_check)
     })
   })
 }
