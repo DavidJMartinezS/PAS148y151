@@ -19,13 +19,19 @@ mod_uso_actual_ui <- function(id) {
     ),
     tags$div(style = "margin-top: 10px"),
     mod_read_sf_ui(ns("predios"), "Ingresar capa de predios") %>%
-      add_help_text(title = "Campos minimos requeridos:\n'N_Predio', Nom_Predio'"),
+      add_help_text(
+        title = "Campos minimos requeridos:\n'N_Predio', Nom_Predio'"
+      ),
     tags$div(style = "margin-top: -10px"),
     mod_read_sf_ui(ns("catastro"), "Ingresar capa de catastro de CONAF") %>%
-      add_help_text(title = "Campos minimos requeridos:\n'USO', 'SUBUSO', 'ESTRUCTURA'"),
+      add_help_text(
+        title = "Campos minimos requeridos:\n'USO', 'SUBUSO', 'ESTRUCTURA'"
+      ),
     tags$div(style = "margin-top: -10px"),
     mod_read_sf_ui(ns("suelos"), "Ingresar capa de suelos de CIREN") %>%
-      add_help_text(title = "Campos minimos requeridos:\n'TEXTCAUSo o Clase_Uso'"),
+      add_help_text(
+        title = "Campos minimos requeridos:\n'TEXTCAUSo o Clase_Uso'"
+      ),
     tags$div(style = "margin-top: -10px"),
     tags$div(
       id = "flex",
@@ -37,7 +43,12 @@ mod_uso_actual_ui <- function(id) {
         color = "success"
       ),
       mod_downfiles_ui(ns("down_uso_actual")),
-      mod_downfiles_ui(ns("down_tbl_uso_actual"), label = "Tabla", style = "material-flat", icon = "file-excel")
+      mod_downfiles_ui(
+        ns("down_tbl_uso_actual"),
+        label = "Tabla",
+        style = "material-flat",
+        icon = "file-excel"
+      )
     )
   )
 }
@@ -45,18 +56,25 @@ mod_uso_actual_ui <- function(id) {
 #' uso_actual Server Functions
 #'
 #' @noRd
-#' @importFrom shiny eventReactive moduleServer observeEvent req
-#' @importFrom terra crs
 mod_uso_actual_server <- function(id, crs, dec_sup){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
+    
+    rv <- reactiveValues(
+      uso_actual = NULL, 
+      wb_uso_actual = NULL,
+      catastro = NULL,
+      suelos = NULL,
+    )
 
     predios <- mod_read_sf_server(
       id = "predios",
-      crs = crs
+      crs = crs()
     )
-    catastro <- eventReactive(predios(),{
-      mod_read_sf_server(
+    
+    observeEvent(input[["catastro-sf_file"]], {
+      req(predios())
+      catastro <- mod_read_sf_server(
         id = "catastro",
         crs = crs(),
         fx = function(x){
@@ -71,19 +89,21 @@ mod_uso_actual_server <- function(id, crs, dec_sup){
         },
         wkt_filter = sf::st_as_text(sf::st_geometry(sf::st_union(predios())))
       )
+      rv$catastro <- catastro()
     })
 
-    observeEvent(catastro(),{
-      req(shiny::isTruthy(catastro()))
+    observeEvent(rv$catastro, {
+      req(rv$catastro)
       check_input(
-        x = catastro(),
+        x = rv$catastro,
         names_req = c('USO', 'SUBUSO', 'ESTRUCTURA'),
         id = "catastro-sf_file"
       )
     })
 
-    suelos <- eventReactive(predios(), {
-      mod_read_sf_server(
+    observeEvent(input[["suelos-sf_file"]], {
+      req(predios())
+      suelos <- mod_read_sf_server(
         id = "suelos",
         crs = crs(),
         fx = function(x){
@@ -95,31 +115,67 @@ mod_uso_actual_server <- function(id, crs, dec_sup){
         },
         wkt_filter = sf::st_as_text(sf::st_geometry(sf::st_union(predios())))
       )
+      rv$suelos <- suelos()
     })
 
-    observeEvent(suelos(),{
-      req(shiny::isTruthy(suelos()))
+    observeEvent(rv$suelos,{
+      req(rv$suelos)
       check_input(
-        x = suelos(),
+        x = rv$suelos,
         names_req = c('Clase_Uso'),
         id = "suelos-sf_file"
       )
     })
 
-    uso_actual <- eventReactive(input$get_uso_actual, {
-      req(c(predios(), catastro(), suelos()))
-      cart_uso_actual(
-        catastro = catastro(),
-        predios = predios(),
-        suelos = suelos(),
-        dec_sup = dec_sup
-      )
+    shinyjs::disable("get_uso_actual")
+    observe({
+      req(predios())
+      req(rv$catastro)
+      req(rv$suelos)
+      shinyjs::enable("get_uso_actual")
     })
 
-    wb_uso_actual <- eventReactive(uso_actual(),{
-      req(c(uso_actual(), predios()))
+    observeEvent(input$get_uso_actual, {
+      # req(c(predios(), isTruthy(rv$catastro), isTruthy(rv$suelos)))
+      shinybusy::show_modal_spinner(
+        spin = "flower",
+        color = "#35978F",
+        text = tags$div(
+          tags$br(),
+          tags$p(
+            "Creando capa de uso actual",
+            tags$br(),
+            "Por favor espere un poco"
+          )
+        )
+      )
+      on.exit({
+        shinybusy::remove_modal_spinner()
+      }, add = TRUE)
 
-      tbl_uso_actual <- uso_actual() %>%
+      rv$uso_actual <- tryCatch({
+        cart_uso_actual(
+          predios = predios(),
+          catastro = rv$catastro,
+          suelos = rv$suelos,
+          dec_sup = dec_sup
+        )
+      }, error= function(e) {
+        shinyalert::shinyalert(
+          title = "Error al crear capa de uso actual!",
+          text = as.character(e$message),
+          html = TRUE,
+          type = "error",
+          closeOnEsc = T,
+          showConfirmButton = T,
+          confirmButtonCol = "#6FB58F",
+          animation = T
+        )
+        return(NULL)
+      })
+
+      req(rv$uso_actual)
+      tbl_uso_actual <- rv$uso_actual %>%
         sf::st_join(predios() %>% dplyr::select(N_Predio), largest = T) %>%
         sf::st_drop_geometry() %>%
         dplyr::select(N_Predio, Uso_Actual, Sup_ha) %>%
@@ -161,36 +217,27 @@ mod_uso_actual_server <- function(id, crs, dec_sup){
       wb <- openxlsx2::wb_workbook(theme = "Integral") %>%
         openxlsx2::wb_add_worksheet("Uso_Actual", grid_lines = T) %>%
         flexlsx::wb_add_flextable(sheet = "Uso_Actual", ft = tbl_uso_actual, start_col = 1, start_row = 1)
+      
+      rv$wb_uso_actual <- wb
 
-      return(wb)
-    })
-
-    observeEvent(input$get_uso_actual, {
-      req(c(predios(), catastro(), suelos()))
-      shinybusy::show_modal_spinner(
-        spin = "flower",
-        color = "#35978F",
-        text = tags$div(
-          tags$br(),
-          tags$p(
-            "Generando capa de uso actual.",
-            tags$br(),
-            "Por favor espere, esto puede tardar un poco"
-          )
+      if (!is.null(rv$shp_ordered)) {
+        shinybusy::notify_success(
+          text = "¡Listo! capa uso actual y su tabla creados",
+          timeout = 3000, position = "right-bottom"
         )
-      )
-      req(c(uso_actual(), wb_uso_actual()))
-      gc(reset = T)
-      shinybusy::remove_modal_spinner()
-      shinybusy::notify_success("Listo el uso actual!", timeout = 3000, position = "right-bottom")
+      }
     })
 
-    observeEvent(uso_actual(), {
-      mod_downfiles_server(id = "down_uso_actual", x = uso_actual(), name_save = "Uso_actual")
-    })
-    observeEvent(wb_uso_actual(),{
-      mod_downfiles_server(id = "down_tbl_uso_actual", x = wb_uso_actual(), name_save = "Tabla_Uso_actual")
-    })
+    mod_downfiles_server(
+      id = "down_uso_actual",
+      x = reactive(rv$uso_actual),
+      name_save = "Uso_actual"
+    )
+    mod_downfiles_server(
+      id = "down_tbl_uso_actual",
+      x = reactive(rv$wb_uso_actual),
+      name_save = "Tabla_uso_actual"
+    )
   })
 }
 

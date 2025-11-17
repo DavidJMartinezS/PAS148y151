@@ -27,10 +27,10 @@ mod_downfiles_ui <- function(id, style = "material-circle", icon = "download", s
 mod_downfiles_server <- function(id, x, name_save){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
-    if (isTruthy(x)) shinyjs::enable("downfile_bttn") else shinyjs::disable("downfile_bttn")
+    observe({if (isTruthy(x())) shinyjs::enable("downfile_bttn") else shinyjs::disable("downfile_bttn")})
 
     filetype <- reactive({
-      x %>%
+      x() %>%
         {if(any(class(.) == "list")) . else list(.)} %>%
         purrr::map( ~ ifelse(
           inherits(., "wbWorkbook"),
@@ -59,9 +59,9 @@ mod_downfiles_server <- function(id, x, name_save){
         file.remove(list.files(pattern = "\\."))
         purrr::pwalk(
           if(length(filetype()) == 1) {
-            list(list(x), list(filetype()), ifelse(inherits(name_save, "list"), name_save, list(name_save)))
+            list(list(x()), list(filetype()), ifelse(inherits(name_save, "list"), name_save, list(name_save)))
           } else {
-            list(x, filetype(), unlist(name_save))
+            list(x(), filetype(), unlist(name_save))
           },
           .f = function(x, y, z) {
             switch(

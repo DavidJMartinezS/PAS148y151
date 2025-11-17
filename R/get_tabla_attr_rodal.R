@@ -67,7 +67,7 @@ get_tabla_attr_rodal <- function(PAS, bd_flora, rodales, umbral_sp_est = 0.05){
   flextable::set_flextable_defaults(
     decimal.mark = ",",
     big.mark = "."
-  )
+  ) %>% suppressWarnings()
 
   parc_x_tipo <- bd_flora %>%
     dplyr::group_by(N_Rodal, Tipo_veg, N_Parc) %>%

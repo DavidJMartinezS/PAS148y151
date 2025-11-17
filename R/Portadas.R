@@ -141,7 +141,7 @@ portada_opts <- function(
     plantilla,
     "KIM753" = app_sys("app/www/logo_conexion.png"),
     "MLP612" = app_sys("app/www/logo_mlp.png"),
-    "default" = if (!is.null(nom_proj)) logo else app_sys("app/www/logo_default.png")
+    "default" = if (!is.null(logo)) logo else app_sys("app/www/logo_default.png")
   )
 
   opts <- list(

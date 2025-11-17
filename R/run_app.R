@@ -24,6 +24,7 @@
 #' @importFrom plyr round_any
 #' @importFrom purrr map map_chr map_dbl map_dfr map_lgl map_vec map2 map2_chr map2_dbl pwalk
 #' @importFrom sf read_sf st_agr st_area st_as_sf st_as_sfc st_as_text st_bbox st_buffer st_cast st_centroid st_collection_extract st_coordinates st_crop st_crs st_difference st_distance st_drop_geometry st_equals st_geometry st_intersection st_is st_join st_make_valid st_nearest_feature st_point st_set_geometry st_sfc st_transform st_union st_zm write_sf
+#' @importFrom rsvg rsvg_raw
 #' @importFrom shinyEffects setShadow
 #' @importFrom shinyWidgets actionBttn awesomeCheckbox downloadBttn dropdownButton formatNumericInput materialSwitch numericInputIcon pickerInput pickerOptions prettyRadioButtons prettyToggle radioGroupButtons switchInput updatePickerInput
 #' @importFrom shinyalert shinyalert

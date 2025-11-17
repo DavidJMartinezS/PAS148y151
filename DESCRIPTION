@@ -26,6 +26,7 @@ Imports:
     osmdata,
     plyr,
     purrr,
+    rsvg,
     sf,
     shiny,
     shinyalert,

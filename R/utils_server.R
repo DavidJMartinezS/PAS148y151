@@ -432,3 +432,63 @@ valid_df <- function(df, names = NULL) {
   invisible()
 }
 
+#' download_files
+#'
+#' @param x objecto o lista de objetos. admite objetos 'data.frame', 'sf' y 'wbWorkbook'.
+#' @param name_save vector de caracteres con los nombres de los objetos.
+#' @param dir_save directorio donde guardar el o los objetos.
+#'
+#' @returns archivos 'xlsx', 'shp' o 'zip'.
+#' @name download_files
+#' @export
+download_files <- function(x, name_save, dir_save) {
+  stopifnot(dir.exists(dir_save))
+
+  filetype <- x %>%
+    {if(any(class(.) == "list")) . else list(.)} %>%
+    purrr::map( ~ ifelse(
+      inherits(., "wbWorkbook"),
+      "wb",
+      ifelse(
+        inherits(., "sf"),
+        "sf",
+        ifelse(inherits(., "data.frame") & !inherits(., "sf"), "xlsx", "")
+      )
+    )) %>%
+    {if(length(.) == 1) unlist(.) else .}
+
+  stopifnot("Solo se admiten objetos de tipo 'data.frame', 'sf' y 'wbWorkbook'" = all(filetype %in% c("sf", "wb", "xlsx")))
+
+  file <- file.path(dir_save, ifelse(
+    length(filetype) > 1,
+    ifelse(is.null(names(name_save)), "Archivos_comprimidos.zip", paste0(names(name_save), ".zip")),
+    paste0(as.character(name_save), ifelse(filetype == "sf", ".zip", ".xlsx"))
+  ))
+
+  wd <- getwd()
+  temp_dir <- tempdir()
+  setwd(temp_dir)
+  file.remove(list.files(pattern = "\\."))
+  purrr::pwalk(
+    if(length(filetype) == 1) {
+      list(list(x), list(filetype), ifelse(inherits(name_save, "list"), name_save, list(name_save)))
+    } else {
+      list(x, filetype, unlist(name_save))
+    },
+    .f = function(x, y, z) {
+      switch(
+        y,
+        sf = sf::write_sf(x, paste0(tools::file_path_sans_ext(z), ".shp")),
+        wb = openxlsx2::wb_save(x, paste0(tools::file_path_sans_ext(z), ".xlsx"), overwrite = T),
+        xlsx = openxlsx2::write_xlsx(x, paste0(tools::file_path_sans_ext(z), ".xlsx"), overwrite = T)
+      )
+    }
+  )
+  list_files <- unname(unlist(map(unlist(name_save), function(x) {list.files(pattern = x)})))
+  if(tools::file_ext(file) == "zip") {
+    zip::zip(zipfile = file, files = list_files)
+  } else {
+    file.copy(from = list_files, to = file, overwrite = T)
+  }
+  setwd(wd)
+}

@@ -19,10 +19,9 @@
 #' @return Objetos sf o numeros
 #' @rdname spatial_functions
 #' @export
-#'
 group_by_distance <- function(x, distance){
   valid_input(x, inherit = c("sf", "sfc"))
-  valid_input(distance, inherit = "numeric")
+  valid_input(distance, inherit = c("numeric", "integer"))
 
   dist_matrix = sf::st_distance(x, by_element = FALSE)
   class(dist_matrix) = NULL
@@ -119,7 +118,7 @@ get_slope <- function (dem, x) {
 
 #' @rdname spatial_functions
 #' @export
-st_order <- function(x, order = "NS-OE", progress = T){
+st_order <- function(x, order = "NS-OE", progress = F){
   valid_input(x, inherit = c("sf", "sfc"))
   valid_input(progress, inherit = c("logical"))
 

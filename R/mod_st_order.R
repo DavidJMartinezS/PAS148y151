@@ -8,7 +8,7 @@
 #'
 mod_st_order_ui <- function(id) {
   ns <- NS(id)
-  tagList(
+  tags$div(
     tags$div(
       style = "color: #0461b8; font-size: 16px",
       icon("circle-info"),
@@ -52,7 +52,8 @@ mod_st_order_ui <- function(id) {
 mod_st_order_server <- function(id){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
-    shp_ordered <- reactiveVal(NULL)
+    
+    rv <- reactiveValues(shp_ordered = NULL)
     shp_to_order <- mod_read_sf_server("sf_order")
     shp_to_order_name <- mod_read_sf_server("sf_order", path = T)
 
@@ -70,13 +71,6 @@ mod_st_order_server <- function(id){
       shinyjs::enable("apply_order")
     })
 
-    shp_ordered <- eventReactive(input$apply_order,{
-      req(shp_to_order())
-      shp_to_order() %>%
-        {if(!is.null(input$select_field_order)) dplyr::group_by(., !!!dplyr::syms(input$select_field_order)) else .} %>%
-        dplyr::mutate(ID_ord = st_order(geometry, order = input$orden))
-    })
-
     observeEvent(input$apply_order,{
       req(shp_to_order())
       shinybusy::show_modal_spinner(
@@ -91,10 +85,12 @@ mod_st_order_server <- function(id){
           )
         )
       )
+
       on.exit({
         shinybusy::remove_modal_spinner()
       }, add = TRUE)
-      shp_ordered(tryCatch({
+
+      rv$shp_ordered <- tryCatch({
         shp_to_order() %>%
           {if(!is.null(input$select_field_order)) dplyr::group_by(., !!!dplyr::syms(input$select_field_order)) else .} %>%
           dplyr::mutate(ID_ord = st_order(geometry, order = input$orden))
@@ -110,27 +106,26 @@ mod_st_order_server <- function(id){
           animation = T
         )
         return(NULL)
-      }))
-      if (!is.null(carto_digital())) {
+      })
+      if (!is.null(rv$shp_ordered)) {
         shinybusy::notify_success(
           text = "¡Listo! Shapefile ordenado.",
           timeout = 3000, position = "right-bottom"
         )
       }
-      gc(reset = T)
-      mod_downfiles_server(
-        id = "down_sf_ordered",
-        x = shp_ordered(),
-        name_save = paste0(shp_to_order_name(),"_ord")
-      )
     })
-    observe({
-      if (isTruthy(shp_ordered())){
-        shinyjs::enable("down_sf_ordered-downfile_bttn")
-      } else {
-        shinyjs::disable("down_sf_ordered-downfile_bttn")
-      }
-    })
+    mod_downfiles_server(
+      id = "down_sf_ordered",
+      x = reactive(rv$shp_ordered),
+      name_save = paste0(shp_to_order_name(),"_ord")
+    )
+    # observe({
+    #   if (isTruthy(shp_ordered())){
+    #     shinyjs::enable("down_sf_ordered-downfile_bttn")
+    #   } else {
+    #     shinyjs::disable("down_sf_ordered-downfile_bttn")
+    #   }
+    # })
   })
 }
 

@@ -94,7 +94,7 @@ get_carto_digital(
 )
 }
 \arguments{
-\item{PAS}{PAS correspondiente. Ingresar \code{148} o \code{151}.}
+\item{PAS}{PAS correspondiente. Ingresar \code{148}, \code{149} o \code{151}.}
 
 \item{rodales}{Objeto sf con los rodales de las areas de corta.}
 

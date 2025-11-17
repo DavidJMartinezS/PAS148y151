@@ -45,7 +45,7 @@ check_carto <- function(x, id){
       if (shiny) {
         shinybusy::report_warning(
           title = "Problemas!",
-          text = paste0(
+          text = tags$p(
             "Shapefile con otros campos adicionales a los requeridos ", tags$br(), tags$br(),
             tags$b("Requeridos: "), paste0(names_req %>% shQuote(), collapse = ", "), tags$br(), tags$br(),
             tags$b("Sobran: "), paste0(setdiff(names_req, names_act) %>% shQuote(), collapse = ", ")
@@ -62,7 +62,7 @@ check_carto <- function(x, id){
       if (shiny) {
         shinybusy::report_warning(
           title = "Problemas!",
-          text = paste0(
+          text = tags$p(
             "Shapefile con los campos requeridos pero desordenados", tags$br(), tags$br(),
             tags$b("\nActual: "), paste0(names_act %>% shQuote(), collapse = ", "), tags$br(), tags$br(),
             tags$b("\nCorrecto: "), paste0(names_req %>% shQuote(), collapse = ", ")
@@ -80,7 +80,7 @@ check_carto <- function(x, id){
     if (shiny) {
       shinybusy::report_failure(
         title = "Error!",
-        text = paste0(
+        text = tags$p(
           "Shapefile sin los campos requeridos", tags$br(), tags$br(),
           tags$b("Requeridos: "), paste0(names_req %>% shQuote(), collapse = ", "), tags$br(), tags$br(),
           tags$b("Faltan: "), paste0(setdiff(names_req, names_act) %>% shQuote(), collapse = ", ")

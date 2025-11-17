@@ -172,7 +172,7 @@ mytheme <- fresh::create_theme(
 #' @noRd
 modal_info_cut_buffer <- bsplus::bs_modal(
   id = "ayuda_info_cut_buffer",
-  title = tags$h4("Porcentaje umbral", style = "font-weight: bold;"),
+  title = tags$h4("Tipo de cortes y buffer", style = "font-weight: bold;"),
   body = bsplus::bs_carousel(id = "hidro_example", use_indicators = T, use_controls = T) %>%
     bsplus::bs_set_data(interval = FALSE) %>%
     bsplus::bs_append(content = bsplus::bs_carousel_image(src = "www/clip.png")) %>%

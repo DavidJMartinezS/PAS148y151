@@ -5,7 +5,7 @@
 #'
 #' @param BD data.frame o ruta con la base de datos
 #' @param rodales objeto sf con los rodales
-#' @param PAS PAS correspondiente. Ingresar \code{148} o \code{151}.
+#' @param PAS PAS correspondiente. Ingresar \code{148}, \code{149} o \code{151}.
 #' @param cut_by_rod logical. \code{TRUE} para seleccionar parcelas dentro de rodales.
 #' @param include_fp Incluir especies fuera de parcela. Incluye ademas especies cuya `Cob_BB` sea \code{NA} o \code{---}.
 #'

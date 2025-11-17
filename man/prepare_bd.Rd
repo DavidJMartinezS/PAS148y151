@@ -18,7 +18,7 @@ prepare_bd_trans(BD)
 
 \item{rodales}{objeto sf con los rodales}
 
-\item{PAS}{PAS correspondiente. Ingresar \code{148} o \code{151}.}
+\item{PAS}{PAS correspondiente. Ingresar \code{148}, \code{149} o \code{151}.}
 
 \item{cut_by_rod}{logical. \code{TRUE} para seleccionar parcelas dentro de rodales.}
 

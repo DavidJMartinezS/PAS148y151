@@ -121,16 +121,6 @@ app_ui <- function(request) {
                   info_dashboard()
                 )
               )
-              # column(
-              #   width = 5,
-              #   shinydashboardPlus::box(
-              #     width = 12,
-              #     title = "Tipos de corte para caminos, hidrografáa y curvas de nivel",
-              #     solidHeader = T,
-              #     status = "success",
-              #     info_cut_buffer()
-              #   )
-              # )
             )
           ),
           ## TABITEM AYUDAS ----
@@ -586,8 +576,9 @@ golem_add_external_resources <- function() {
       path = app_sys("app/www"),
       app_title = "PAS148y151"
     ),
-    tags$link(rel="stylesheet", type="text/css", href="www/custom.css")
+    tags$link(rel="stylesheet", type="text/css", href="www/custom.css"),
     # Add here other external resources
+    shinyjs::useShinyjs()
     # for example, you can add shinyalert::useShinyalert()
   )
 }

@@ -230,14 +230,14 @@ apendice_2_3 <- function(
     df_trans <- NULL
   }
 
-  flextable::set_flextable_defaults(decimal.mark = ",", big.mark = ".")
+  flextable::set_flextable_defaults(decimal.mark = ",", big.mark = ".") %>% suppressWarnings()
 
   opts <- switch (
     portada,
     "default" = portada_opts(plantilla = "default"),
     "MLP612" = portada_opts(plantilla = "MLP612"),
     "KIM753" = portada_opts(plantilla = "KIM753"),
-    "otra" = if (is.null(portada_opts)) portada_opts() else do.call(portada_opts, portada_opts)
+    "otra" = if (is.null(portada_opts)) portada_opts() else do.call(PAS148y151::portada_opts, portada_opts)
   )
 
   ## Apendice 2 ----
@@ -457,22 +457,22 @@ apendice_5_PAS148 <- function(
   if (!is.null(bd_flora_2)) {
     valid_df(bd_flora_2, names = c("Parcela", "Especie", "Nha", "Habito"))
   }
-  if (!isTruthy(areas) & !isTruthy(obras)) {
-    if (c("Tipo", "Obra") %>% names(obras) %>% all()) {
+  if (isTruthy(areas) & isTruthy(obras)) {
+    if (!all(c("Tipo", "Obra") %in% names(obras))) {
       areas <- NULL
       obras <- NULL
     }
   }
 
   # Configuracion flextable ----
-  flextable::set_flextable_defaults(decimal.mark = ",", big.mark = ".")
+  flextable::set_flextable_defaults(decimal.mark = ",", big.mark = ".") %>% suppressWarnings()
 
   opts <- switch (
     portada,
     "default" = portada_opts(plantilla = "default"),
     "MLP612" = portada_opts(plantilla = "MLP612"),
     "KIM753" = portada_opts(plantilla = "KIM753"),
-    "otra" = if (is.null(portada_opts)) portada_opts() else do.call(portada_opts, portada_opts)
+    "otra" = if (is.null(portada_opts)) portada_opts() else do.call(PAS148y151::portada_opts, portada_opts)
   )
 
   wb_ap5 <- openxlsx2::wb_workbook(theme = "Integral") %>%
@@ -1187,6 +1187,7 @@ apendice_5_PAS151 <- function(
   valid_df(tabla_areas, names = c('N_Predio', 'N_Area', 'Ran_Pend', 'Clase_Eros', 'Sup_ha'))
   valid_df(tabla_attr_rodal, names = c("N_Rodal", "Tipo_veg", "Tipo_attr", "Nom_attr"))
   stopifnot(umbral_sp_est <= 1)
+  cov_fp <- match.arg(as.character(cov_fp), choices = c(0, 0.5, 1))
   provincia <- match.arg(provincia, choices = unlist(provincias_list))
   portada <- match.arg(portada, c("default", "MLP612", "KIM753", "otra"))
   valid_input(portada_opts, inherit = c("NULL", "list"))
@@ -1195,21 +1196,21 @@ apendice_5_PAS151 <- function(
   }
   if (isTruthy(areas) & isTruthy(obras)) {
     valid_input(areas, obras, inherit = "sf", geometry = "POLYGON")
-    if (c("Tipo", "Obra") %>% names(obras) %>% all()) {
+    if (all(c("Tipo", "Obra") %in% names(obras))) {
       areas <- NULL
       obras <- NULL
     }
   }
 
   # Configuracion flextable ----
-  flextable::set_flextable_defaults(decimal.mark = ",", big.mark = ".")
+  flextable::set_flextable_defaults(decimal.mark = ",", big.mark = ".") %>% suppressWarnings()
 
   opts <- switch (
     portada,
     "default" = portada_opts(plantilla = "default"),
     "MLP612" = portada_opts(plantilla = "MLP612"),
     "KIM753" = portada_opts(plantilla = "KIM753"),
-    "otra" = if (is.null(portada_opts)) portada_opts() else do.call(portada_opts, portada_opts)
+    "otra" = if (is.null(portada_opts)) portada_opts() else do.call(PAS148y151::portada_opts, portada_opts)
   )
 
   wb_ap5 <- openxlsx2::wb_workbook(theme = "Integral") %>%
@@ -1389,44 +1390,43 @@ apendice_5_PAS151 <- function(
     dplyr::select(Tipo_veg, N_Parc, Especie, Habito, Cob_BB) %>%
     split(.$Tipo_veg) %>%
     purrr::map(function(x) {
-      x %>%
-        {if (cov_as_range) {
-          dplyr::mutate(
-            .,
-            Cob_ind = dplyr::case_match(
-              Cob_BB,
-              "r" ~ "1",
-              "+" ~ "3",
-              "1" ~ "<5",
-              "2" ~ "7.5",
-              "3" ~ "10-25",
-              "4" ~ "25-50",
-              "5" ~ "50-75",
-              "6" ~ "75-100",
-              .default = as.character(cov_fp)
-            )
-          ) %>%
-            dplyr::group_by(Tipo_veg, Especie, Habito) %>%
-            dplyr::summarise(Cob_ind = paste0(unique(Cob_ind), collapse = "; "), .groups = "drop")
-        } else {
-          dplyr::mutate(
-            .,
-            Cob_ind = dplyr::case_match(
-              Cob_BB,
-              "r" ~ 1,
-              "+" ~ 3,
-              "1" ~ 5,
-              "2" ~ 7.5,
-              "3" ~ 17.5,
-              "4" ~ 37.5,
-              "5" ~ 62.5,
-              "6" ~ 87.5,
-              .default = cov_fp
-            )
-          ) %>%
-            dplyr::group_by(Tipo_veg, Especie, Habito) %>%
-            dplyr::summarise(Cob_ind = mean(Cob_ind), .groups = "drop")
-        }}
+      if (cov_as_range) {
+        dplyr::mutate(
+          x,
+          Cob_ind = dplyr::case_match(
+            Cob_BB,
+            "r" ~ "1",
+            "+" ~ "3",
+            "1" ~ "<5",
+            "2" ~ "7.5",
+            "3" ~ "10-25",
+            "4" ~ "25-50",
+            "5" ~ "50-75",
+            "6" ~ "75-100",
+            .default = as.character(cov_fp)
+          )
+        ) %>%
+          dplyr::group_by(Tipo_veg, Especie, Habito) %>%
+          dplyr::summarise(Cob_ind = paste0(unique(Cob_ind), collapse = "; "), .groups = "drop")
+      } else {
+        dplyr::mutate(
+          x,
+          Cob_ind = dplyr::case_match(
+            Cob_BB,
+            "r" ~ 1,
+            "+" ~ 3,
+            "1" ~ 5,
+            "2" ~ 7.5,
+            "3" ~ 17.5,
+            "4" ~ 37.5,
+            "5" ~ 62.5,
+            "6" ~ 87.5,
+            .default = as.numeric(cov_fp)
+          )
+        ) %>%
+          dplyr::group_by(Tipo_veg, Especie, Habito) %>%
+          dplyr::summarise(Cob_ind = mean(Cob_ind), .groups = "drop")
+      }
     }) %>%
     dplyr::bind_rows() %>%
     dplyr::arrange(Tipo_veg) %>%
@@ -1848,6 +1848,7 @@ apendice_5_PAS151_nuevo <- function(
   valid_df(tabla_areas, names = c('N_Predio', 'N_Area', 'Ran_Pend', 'Clase_Eros', 'Sup_ha'))
   valid_df(tabla_attr_rodal, names = c("N_Rodal", "Tipo_veg", "Tipo_attr", "Nom_attr"))
   stopifnot(umbral_sp_est <= 1)
+  cov_fp <- match.arg(as.character(cov_fp), choices = c(0, 0.5, 1))
   provincia <- match.arg(provincia, choices = unlist(provincias_list))
   portada <- match.arg(portada, c("default", "MLP612", "KIM753", "otra"))
   valid_input(portada_opts, inherit = c("NULL", "list"))
@@ -1856,21 +1857,22 @@ apendice_5_PAS151_nuevo <- function(
   }
   if (isTruthy(areas) & isTruthy(obras)) {
     valid_input(areas, obras, inherit = "sf", geometry = "POLYGON")
-    if (c("Tipo", "Obra") %>% names(obras) %>% all()) {
+    if (!all(c("Tipo", "Tipo_obra", "Nom_obra", "Fase") %in% names(obras))) {
       areas <- NULL
       obras <- NULL
     }
   }
 
-  # Configuracion flextable ----
-  flextable::set_flextable_defaults(decimal.mark = ",", big.mark = ".")
+  # Configuracion flextable 
+  flextable::set_flextable_defaults(decimal.mark = ",", big.mark = ".") %>% suppressWarnings()
 
+  # Portada
   opts <- switch (
     portada,
     "default" = portada_opts(plantilla = "default"),
     "MLP612" = portada_opts(plantilla = "MLP612"),
     "KIM753" = portada_opts(plantilla = "KIM753"),
-    "otra" = if (is.null(portada_opts)) portada_opts() else do.call(portada_opts, portada_opts)
+    "otra" = if (is.null(portada_opts)) portada_opts() else do.call(PAS148y151::portada_opts, portada_opts)
   )
 
   wb_ap5 <- openxlsx2::wb_workbook(theme = "Integral") %>%
@@ -1882,6 +1884,7 @@ apendice_5_PAS151_nuevo <- function(
       opts = opts
     )
 
+  # styling
   new_border <- openxlsx2::create_border(
     bottom = "thin",
     bottom_color = openxlsx2::wb_color("black"),
@@ -2067,44 +2070,44 @@ apendice_5_PAS151_nuevo <- function(
     dplyr::select(Tipo_veg, N_Parc, Especie, Habito, Cob_BB) %>%
     split(.$Tipo_veg) %>%
     purrr::map(function(x) {
-      x %>%
-        {if (cov_as_range) {
-          dplyr::mutate(
-            .,
-            Cob_ind = dplyr::case_match(
-              Cob_BB,
-              "r" ~ "1",
-              "+" ~ "3",
-              "1" ~ "<5",
-              "2" ~ "5-10",
-              "3" ~ "10-25",
-              "4" ~ "25-50",
-              "5" ~ "50-75",
-              "6" ~ "75-100",
-              .default = as.character(cov_fp)
-            )
-          ) %>%
-            dplyr::group_by(Tipo_veg, Especie, Habito) %>%
-            dplyr::summarise(Cob_ind = paste0(unique(Cob_ind), collapse = "; "), .groups = "drop")
-        } else {
-          dplyr::mutate(
-            .,
-            Cob_ind = dplyr::case_match(
-              Cob_BB,
-              "r" ~ 1,
-              "+" ~ 3,
-              "1" ~ 5,
-              "2" ~ 7.5,
-              "3" ~ 17.5,
-              "4" ~ 37.5,
-              "5" ~ 62.5,
-              "6" ~ 87.5,
-              .default = cov_fp
-            )
-          ) %>%
-            dplyr::group_by(Tipo_veg, Especie, Habito) %>%
-            dplyr::summarise(Cob_ind = mean(Cob_ind), .groups = "drop")
-        }}
+      if (cov_as_range) {
+        df <- dplyr::mutate(
+          x,
+          Cob_ind = dplyr::case_match(
+            Cob_BB,
+            "r" ~ "1",
+            "+" ~ "3",
+            "1" ~ "<5",
+            "2" ~ "5-10",
+            "3" ~ "10-25",
+            "4" ~ "25-50",
+            "5" ~ "50-75",
+            "6" ~ "75-100",
+            .default = as.character(cov_fp)
+          )
+        ) %>%
+          dplyr::group_by(Tipo_veg, Especie, Habito) %>%
+          dplyr::summarise(Cob_ind = paste0(unique(Cob_ind), collapse = "; "), .groups = "drop")
+      } else {
+        df <- dplyr::mutate(
+          x,
+          Cob_ind = dplyr::case_match(
+            Cob_BB,
+            "r" ~ 1,
+            "+" ~ 3,
+            "1" ~ 5,
+            "2" ~ 7.5,
+            "3" ~ 17.5,
+            "4" ~ 37.5,
+            "5" ~ 62.5,
+            "6" ~ 87.5,
+            .default = as.numeric(cov_fp)
+          )
+        ) %>%
+          dplyr::group_by(Tipo_veg, Especie, Habito) %>%
+          dplyr::summarise(Cob_ind = mean(Cob_ind), .groups = "drop")
+      }
+      return(df)
     }) %>%
     dplyr::bind_rows() %>%
     dplyr::arrange(Tipo_veg) %>%
@@ -2113,6 +2116,11 @@ apendice_5_PAS151_nuevo <- function(
   nha_ptos <- tabla_areas %>%
     dplyr::left_join(
       tabla_attr_rodal %>%
+        dplyr::filter(
+          !Tipo_attr %>%
+            stringi::stri_trans_general("Latin-ASCII") %>%
+            stringi::stri_detect_regex("linea.*base", case_insensitive = T)
+        ) %>%
         dplyr::mutate(Parcelas = purrr::map(Nom_attr, function(x) {
           x %>%
             stringi::stri_replace_all_regex("Parcela ", "") %>%
@@ -2140,7 +2148,7 @@ apendice_5_PAS151_nuevo <- function(
       )
     ) %>%
     {if (!is.null(bd_flora_2)) {
-      dplyr::bind_rows(
+      dplyr::bind_rows(.[],
         tabla_areas %>%
           tibble::as_tibble() %>%
           dplyr::left_join(
@@ -2179,7 +2187,7 @@ apendice_5_PAS151_nuevo <- function(
           )
       )
     } else . } %>%
-    dplyr::mutate_at("cob_x_sp", ~ purrr::map(., dplyr::select,-c(Especie, Habito))) %>%
+    dplyr::mutate_at("cob_x_sp", ~ purrr::map(., dplyr::select, -c(Especie, Habito))) %>%
     dplyr::select(N_Predio, N_Rodal, N_Area, nha_x_sp, cob_x_sp) %>%
     tidyr::unnest_legacy() %>%
     dplyr::arrange(N_Predio, N_Area) %>%
@@ -2300,10 +2308,9 @@ apendice_5_PAS151_nuevo <- function(
     dplyr::mutate(Dispone = NA_character_, Fuente = NA_character_) %>%
     dplyr::mutate_at(
       "DS_68",
-      ~ ifelse(
-        stringi::stri_cmp_equiv(., "originaria", strength = 1),
-        "En nómina de especies",
-        "No presente en nómina"
+      ~case_when(
+        stringi::stri_cmp_equiv(., "originaria", strength = 1) ~ "En nómina de especies",
+        .default = "No presente en nómina"
       )
     ) %>%
     dplyr::arrange(DS_68) %>%
@@ -2329,7 +2336,9 @@ apendice_5_PAS151_nuevo <- function(
     dplyr::group_by(N_Area) %>%
     dplyr::mutate(Densidad = sum(Nha)) %>%
     dplyr::ungroup() %>%
-    dplyr::mutate_at("Cobertura", janitor::round_half_up, 1) %>%
+    {if(!cov_as_range) {
+      dplyr::mutate_at(.,"Cobertura", janitor::round_half_up, 1) 
+    } else .[]} %>% 
     dplyr::arrange(N_Predio, N_Area, dplyr::desc(Nha)) %>%
     `names<-`(
       c(
@@ -2368,12 +2377,16 @@ apendice_5_PAS151_nuevo <- function(
   # Tabla ECC ----
   tabla_ECC <- tbl_nha_cob %>%
     dplyr::left_join(
-      dplyr::bind_rows(bd_flora, bd_flora_2) %>%
-        dplyr::count(Especie, Habito, DS_68, RCE, Decreto) %>%
-        dplyr::select(-n)
+      list(bd_flora, bd_flora_2) %>% 
+        purrr::compact() %>% 
+        purrr::map_dfr(function(x){
+          x %>% 
+            dplyr::count(Especie, Habito, DS_68, RCE, Decreto) %>%
+            dplyr::select(-n)
+        })
     ) %>%
     dplyr::group_by(N_Predio, Especie, DS_68, RCE, Decreto) %>%
-    dplyr::summarise(N_Areas = paste(N_Area, collapse = ", ")) %>%
+    dplyr::summarise(N_Areas = paste(unique(N_Area), collapse = ", ")) %>%
     dplyr::select(N_Predio, N_Areas, Especie, DS_68, RCE, Decreto) %>%
     dplyr::mutate(Singular = "Presencia de especie clasificada en categoría de conservación") %>%
     dplyr::relocate(Singular, .after = DS_68) %>%
@@ -2402,7 +2415,7 @@ apendice_5_PAS151_nuevo <- function(
     flexlsx::wb_add_flextable(
       sheet = "3.4.2",
       ft = tabla_ECC,
-      start_col = 7,
+      start_col = 1,
       start_row = 1
     )
 

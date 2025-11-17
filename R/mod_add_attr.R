@@ -5,8 +5,6 @@
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
 #' @noRd
-#'
-#' @importFrom shiny icon NS tagList uiOutput
 mod_add_attr_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -53,13 +51,11 @@ mod_add_attr_ui <- function(id) {
 #' add_attr Server Functions
 #'
 #' @noRd
-#' @importFrom dplyr select
-#' @importFrom shiny eventReactive fileInput isTruthy moduleServer observe observeEvent renderUI req
-#' @importFrom shinyWidgets updatePickerInput
 mod_add_attr_server <- function(id, PAS){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
+    rv <- reactiveValues(shp_2 = NULL)
     shp <- mod_read_sf_server("sf_to_attr")
     shp_name <- mod_read_sf_server("sf_to_attr", path = T)
 
@@ -122,55 +118,8 @@ mod_add_attr_server <- function(id, PAS){
       }
     })
 
-    shp_2 <- eventReactive(input$add_attr,{
+    observeEvent(input$add_attr, {
       req(shp())
-      shp() %>%
-        {if (input$add_pend_info) {
-          .[] %>%
-            dplyr::mutate(Pend_media = get_slope(dem = input$dem_help$datapath, x = shp())) %>%
-            {if(PAS == 148){
-              .[] %>%
-                dplyr::mutate(
-                  Ran_Pend = dplyr::case_when(
-                    Pend_media >= 0 & Pend_media < 30 ~ "0% - 30%",
-                    Pend_media >= 30 & Pend_media < 45 ~ "30% - 45%",
-                    Pend_media >= 45 & Pend_media < 60 ~ "45% - 60%",
-                    Pend_media >= 60  ~ "60% y más"
-                  )
-                )
-            } else {
-              .[] %>%
-                dplyr::mutate(
-                  Ran_pend = dplyr::case_when(
-                    Pend_media >= 0 & Pend_media < 10 ~ "0% - 10%",
-                    Pend_media >= 10 & Pend_media < 30 ~ "10% - 30%",
-                    Pend_media >= 30 & Pend_media < 45 ~ "30% - 45%",
-                    Pend_media >= 45 & Pend_media < 60 ~ "45% - 60%",
-                    Pend_media >= 60  ~ "60% y más"
-                  )
-                )
-            }}
-        } else .} %>%
-        {if (input$add_hidro_info) {
-          .[] %>%
-            dplyr::mutate(
-              Distancia = c(1:nrow(shp())) %>%
-                purrr::map_dbl(function(x) {
-                  sf::st_distance(shp()[x,], hidro()[sf::st_nearest_feature(shp()[x,], sf::st_geometry(hidro())),]) %>%
-                    units::drop_units() %>%
-                    janitor::round_half_up()
-                })
-            ) %>%
-            dplyr::bind_cols(
-              hidro()[sf::st_nearest_feature(shp(), sf::st_geometry(hidro())),] %>%
-                dplyr::select(!!!dplyr::syms(input$campos)) %>%
-                sf::st_drop_geometry()
-            )
-        } else .} %>%
-        dplyr::relocate(geometry, .after = dplyr::last_col())
-    })
-
-    observeEvent(input$add_attr,{
       shinybusy::show_modal_spinner(
         spin = "flower",
         color = "#35978F",
@@ -183,14 +132,85 @@ mod_add_attr_server <- function(id, PAS){
           )
         )
       )
-      req(shp_2())
-      gc(reset = T)
-      shinybusy::remove_modal_spinner()
+      on.exit({
+        shinybusy::remove_modal_spinner()
+      }, add = TRUE)
+
+      rv$shp_2 <- tryCatch({
+        shp() %>%
+          {if (input$add_pend_info) {
+            .[] %>%
+              dplyr::mutate(Pend_media = get_slope(dem = input$dem_help$datapath, x = shp())) %>%
+              {if(PAS == 148){
+                .[] %>%
+                  dplyr::mutate(
+                    Ran_Pend = dplyr::case_when(
+                      Pend_media >= 0 & Pend_media < 30 ~ "0% - 30%",
+                      Pend_media >= 30 & Pend_media < 45 ~ "30% - 45%",
+                      Pend_media >= 45 & Pend_media < 60 ~ "45% - 60%",
+                      Pend_media >= 60  ~ "60% y más"
+                    )
+                  )
+              } else {
+                .[] %>%
+                  dplyr::mutate(
+                    Ran_pend = dplyr::case_when(
+                      Pend_media >= 0 & Pend_media < 10 ~ "0% - 10%",
+                      Pend_media >= 10 & Pend_media < 30 ~ "10% - 30%",
+                      Pend_media >= 30 & Pend_media < 45 ~ "30% - 45%",
+                      Pend_media >= 45 & Pend_media < 60 ~ "45% - 60%",
+                      Pend_media >= 60  ~ "60% y más"
+                    )
+                  )
+              }}
+          } else .} %>%
+          {if (input$add_hidro_info) {
+            .[] %>%
+              dplyr::mutate(
+                Distancia = c(1:nrow(shp())) %>%
+                  purrr::map_dbl(function(x) {
+                    sf::st_distance(shp()[x,], hidro()[sf::st_nearest_feature(shp()[x,], sf::st_geometry(hidro())),]) %>%
+                      units::drop_units() %>%
+                      janitor::round_half_up()
+                  })
+              ) %>%
+              dplyr::bind_cols(
+                hidro()[sf::st_nearest_feature(shp(), sf::st_geometry(hidro())),] %>%
+                  dplyr::select(!!!dplyr::syms(input$campos)) %>%
+                  sf::st_drop_geometry()
+              )
+          } else .} %>%
+          dplyr::relocate(geometry, .after = dplyr::last_col())
+      }, error= function(e) {
+        shinyalert::shinyalert(
+          title = "Error al añadir atributos!",
+          text = as.character(e$message),
+          html = TRUE,
+          type = "error",
+          closeOnEsc = T,
+          showConfirmButton = T,
+          confirmButtonCol = "#6FB58F",
+          animation = T
+        )
+        return(NULL)
+      })
+      if (!is.null(rv$shp_ordered)) {
+        shinybusy::notify_success(
+          text = "¡Listo! Atributos añadidos.",
+          timeout = 3000, position = "right-bottom"
+        )
+      }
     })
-    observeEvent(shp_2(),{
-      mod_downfiles_server(id = "down_sf", x = shp_2(), name_save = shp_name())
-      mod_downfiles_server(id = "down_xlsx", x = sf::st_drop_geometry(shp_2()), name_save = shp_name())
-    })
+    mod_downfiles_server(
+      id = "down_sf",
+      x = reactive(rv$shp_2),
+      name_save = shp_name()
+    )
+    mod_downfiles_server(
+      id = "down_xlsx",
+      x = reactive(sf::st_drop_geometry(rv$shp_2)),
+      name_save = shp_name()
+    )
   })
 }
 

@@ -13,7 +13,7 @@ my_union(x, y)
 
 get_slope(dem, x)
 
-st_order(x, order = "NS-OE", progress = T)
+st_order(x, order = "NS-OE", progress = F)
 }
 \arguments{
 \item{x, y}{Objeto sf.}

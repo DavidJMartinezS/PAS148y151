@@ -4,22 +4,37 @@
 #'     DO NOT REMOVE.
 #' @noRd
 app_server <- function(input, output, session) {
-  options(shiny.maxRequestSize = 4000 * 1024 ^ 2, timeout = 600)
+  options(shiny.maxRequestSize = 4000 * 1024 ^ 2, timeout = 600, shiny.sanitize.errors = TRUE)
 
   crs <- reactive({ifelse(input$huso == "18S", 32718, 32719)})
 
   flextable::set_flextable_defaults(
     decimal.mark = ",",
     big.mark = "."
-  )
+  ) %>% suppressWarnings()
 
   # Outputs ----
-  areas_prop <- reactiveVal(NULL)
-  carto_digital <- reactiveVal(NULL)
-  wb_planos <- reactiveVal(NULL)
-  tabla_attr_rodal_0 <- reactiveVal(NULL)
-  apendices_2y3 <- reactiveVal(NULL)
-  apendice_5 <- reactiveVal(NULL)
+  rv <- reactiveValues(
+    crs = NULL,
+    distance = NULL,
+    orden_rodales = NULL,
+    areas_prop = NULL,
+    carto_digital = NULL,
+    wb_planos = NULL,
+    tabla_attr_rodal_0 = NULL,
+    tabla_attr_rodal = NULL,
+    apendices_2y3 = NULL,
+    bd_flora_2 = NULL,
+    obras_ap5 = NULL,
+    apendice_5 = NULL
+  )
+
+  observeEvent(input$distance, {
+    rv$distance <- input$distance
+  })
+  observeEvent(crs(), {
+    rv$crs <- crs()
+  })
 
   # AYUDAS ----
   ## Pred Rod Area ----
@@ -156,7 +171,7 @@ app_server <- function(input, output, session) {
       shinybusy::remove_modal_spinner()
     }, add = TRUE)
 
-    areas_prop(tryCatch({
+    rv$areas_prop <- tryCatch({
       get_pred_rod_area(
         PAS = input$PAS,
         LB = LB(),
@@ -166,14 +181,15 @@ app_server <- function(input, output, session) {
         group_by_LB = input$group_by_LB,
         sep_by_soil = input$sep_by_soil,
         group_by_dist = input$group_by_dist,
-        distance_max = input$distance,
+        distance_max = rv$distance,
         cut_by_prov = input$cut_by_prov,
         provincia = input$provincia,
         n_rodal_ord = input$ord_rodales,
-        orden_rodal = input$orden_rodales,
+        orden_rodal = if(input$ord_rodales) input$orden_rodales else "NS-OE",
         dec_sup = input$n_dec
       )
     }, error = function(e) {
+      print(e)
       shinyalert::shinyalert(
         title = "Error al generar la capas preliminares!",
         text = as.character(e$message),
@@ -185,38 +201,31 @@ app_server <- function(input, output, session) {
         animation = T
       )
       return(NULL)
-    }))
+    })
 
-    if (!is.null(areas_prop())) {
+    if (!is.null(rv$areas_prop)) {
       shinybusy::notify_success(
         text = "¡Listo! Cartografía digital generada.",
         timeout = 3000, position = "right-bottom"
       )
     }
-    gc(reset = T)
-    mod_downfiles_server(
-      id = "down_areas",
-      x = areas_prop(),
-      name_save = list(capas_preliminares = c("Rodales_propuestos", "Areas_propuestas", "Predios_propuestos"))
-    )
+    
   })
 
-  observe({
-    if (isTruthy(areas_prop())){
-      shinyjs::enable("down_areas-downfile_bttn")
-    } else {
-      shinyjs::disable("down_areas-downfile_bttn")
-    }
-  })
-
-  observeEvent(areas_prop(), {
-    req(areas_prop())
-    if (any(areas_prop()$Rodales %>% dplyr::group_by(N_Rodal) %>% dplyr::summarise_at("Sup_ha", sum) %>% .$Sup_ha < 0.5) & input$PAS == 148) {
+  mod_downfiles_server(
+    id = "down_areas",
+    x = reactive(rv$areas_prop),
+    name_save = list(capas_preliminares = c("Rodales_propuestos", "Areas_propuestas", "Predios_propuestos"))
+  )
+  
+  observeEvent(rv$areas_prop, {
+    req(rv$areas_prop)
+    if (any(rv$areas_prop$Rodales %>% dplyr::group_by(N_Rodal) %>% dplyr::summarise_at("Sup_ha", sum) %>% .$Sup_ha < 0.5) & input$PAS == 148) {
       shinybusy::report_warning(
         title = "OJO!. Rodales de bosque menores a 0,5 ha",
         text = paste0(
           "Los siguientes rodales de BN presentan una superficie inferior a 0,5 ha:\n",
-          areas_prop()$Rodales %>%
+          rv$areas_prop$Rodales %>%
             dplyr::group_by(N_Rodal) %>%
             dplyr::summarise_at("Sup_ha", sum) %>%
             dplyr::filter(Sup_ha < 0.5) %>%
@@ -226,12 +235,12 @@ app_server <- function(input, output, session) {
         )
       )
     }
-    if (any(areas_prop()$Rodales %>% dplyr::group_by(N_Rodal) %>% dplyr::summarise_at("Sup_ha", sum) %>% .$N_Rodal < 1) & input$PAS == 151) {
+    if (any(rv$areas_prop$Rodales %>% dplyr::group_by(N_Rodal) %>% dplyr::summarise_at("Sup_ha", sum) %>% .$N_Rodal < 1) & input$PAS == 151) {
       shinybusy::report_warning(
         title = "OJO!. Rodales de FX menores a 1 ha",
         text = paste0(
           "Los siguientes rodales presentan una superficie inferior a 1 ha:\n",
-          areas_prop()$Rodales %>%
+          rv$areas_prop$Rodales %>%
             dplyr::group_by(N_Rodal) %>%
             dplyr::summarise_at("Sup_ha", sum) %>%
             dplyr::filter(Sup_ha < 1) %>%
@@ -241,15 +250,15 @@ app_server <- function(input, output, session) {
         )
       )
     }
-    if (nrow(areas_prop()$Rodales %>% dplyr::count(N_Rodal)) >
-        nrow(areas_prop()$Rodales %>% dplyr::count(N_Rodal) %>% .[areas_prop()$Areas, ])) {
+    if (nrow(rv$areas_prop$Rodales %>% dplyr::count(N_Rodal)) >
+        nrow(rv$areas_prop$Rodales %>% dplyr::count(N_Rodal) %>% .[rv$areas_prop$Areas, ])) {
       shinybusy::report_warning(
         title = "Rodales sin áreas",
         text = paste0(
           "Los siguientes rodales sobran:\n",
           setdiff(
-            areas_prop()$Rodales %>% dplyr::count(N_Rodal) %>% .$N_Rodal,
-            areas_prop()$Rodales %>% dplyr::count(N_Rodal) %>% .[areas_prop()$Areas, ] %>% .$N_Rodal
+            rv$areas_prop$Rodales %>% dplyr::count(N_Rodal) %>% .$N_Rodal,
+            rv$areas_prop$Rodales %>% dplyr::count(N_Rodal) %>% .[rv$areas_prop$Areas, ] %>% .$N_Rodal
           ) %>%
             shQuote() %>%
             paste(collapse = ", ")
@@ -268,7 +277,7 @@ app_server <- function(input, output, session) {
   mod_add_attr_server("add_attr", PAS = input$PAS)
 
   ## Crear uso actual ----
-  mod_uso_actual_server("uso_actua_1", crs = crs(), dec_sup = input$n_dec)
+  mod_uso_actual_server("uso_actual_1", crs = reactive(rv$crs), dec_sup = input$n_dec)
 
   # CARTO y APENDICES ----
   ## Cartografia digital ----
@@ -592,21 +601,13 @@ app_server <- function(input, output, session) {
     shinyjs::enable("check_bd_flora")
   })
 
-  observeEvent(bd_flora(), {
+  # observeEvent(bd_flora(), {
     mod_downfiles_server(
       id = "down_bd_flora",
-      x = bd_flora(),
+      x = reactive(bd_flora()),
       name_save = c("BD_Flora")
     )
-  })
-
-  observe({
-    if (isTruthy(bd_flora())){
-      shinyjs::enable("down_bd_flora-downfile_bttn")
-    } else {
-      shinyjs::disable("down_bd_flora-downfile_bttn")
-    }
-  })
+  # })
 
   observeEvent(input$check_bd_flora,{
     req(bd_flora())
@@ -779,7 +780,7 @@ app_server <- function(input, output, session) {
       shinybusy::remove_modal_spinner()
     }, add = TRUE)
 
-    carto_digital(tryCatch({
+    rv$carto_digital <- tryCatch({
       get_carto_digital(
         PAS = input$PAS,
         areas = areas_def(),
@@ -820,47 +821,13 @@ app_server <- function(input, output, session) {
         animation = T
       )
       return(NULL)
-    }))
+    })
 
-    gc(reset = T)
-
-    mod_downfiles_server(
-      id = "down_carto",
-      x = carto_digital(),
-      name_save = list(Cartografia_digital = c(
-        "Area",
-        "Rodales",
-        "Limite_Predial",
-        "Suelos",
-        "Rangos_pend",
-        "Tabla_predios",
-        "Tabla_areas",
-        "Parcela",
-        "Uso_actual",
-        "Caminos",
-        "Caminos_osm",
-        "Hidrografia",
-        "Hidrografia_osm",
-        "Curvas_niv"
-      ) %>%
-        paste(.,input$NOMPREDIO, sep = "_") %>%
-        subset(
-          c(rep(T, 7),
-            input$add_parcelas,
-            input$add_uso_actual,
-            input$add_cam,
-            if(input$add_cam == F) F else input$add_cam_osm,
-            input$add_hidro,
-            if(input$add_hidro == F) F else input$add_hidro_osm,
-            input$add_CN
-          )
-        ))
-    )
-    req(carto_digital())
+    req(rv$carto_digital)
     var_suelo <- if (input$PAS == 148) dplyr::sym("Clase_Uso") else dplyr::sym("Clase_Eros")
     nom_suelo <- if (input$PAS == 148) "Clase Uso Suelo" else "Grado de Erosión"
 
-    ft_planos_areas <- carto_digital()$tabla_areas %>%
+    ft_planos_areas <- rv$carto_digital$tabla_areas %>%
       dplyr::select(N_Predio, N_Area, Ran_Pend, !!var_suelo, Sup_ha) %>%
       `names<-`(c("N° Predio", "Área N°", "Rango Pendiente (%)", nom_suelo, "Superficie área de corta (ha)")) %>%
       flextable::flextable() %>%
@@ -870,7 +837,7 @@ app_server <- function(input, output, session) {
       flextable::valign(part = "header", valign = "center") %>%
       flextable::align(part = "header", align = "center")
 
-    ft_planos_predios <- carto_digital()$tabla_predios %>%
+    ft_planos_predios <- rv$carto_digital$tabla_predios %>%
       mutate(Pto_ref = NA_character_, Este = as.integer(NA), Norte = as.integer(NA)) %>%
       dplyr::mutate(Pto_ref = NA_character_, Este = as.integer(NA), Norte = as.integer(NA)) %>%
       dplyr::select(N_Predio, Nom_Predio, Propietari, Rol, Comuna, Sup_ha, Pto_ref, Este, Norte) %>%
@@ -902,9 +869,9 @@ app_server <- function(input, output, session) {
       openxlsx2::wb_add_worksheet("Predios") %>%
       flexlsx::wb_add_flextable(sheet = "Predios", ft = ft_planos_predios, start_col = 1, start_row = 1)
 
-    wb_planos(wb)
+    rv$wb_planos <- wb
 
-    if (!is.null(carto_digital())) {
+    if (!is.null(rv$carto_digital)) {
       shinybusy::report_success(
         title = "Listo!",
         text = "Se ha generado la cartografía digital y las tablas para los planos",
@@ -913,84 +880,44 @@ app_server <- function(input, output, session) {
     }
   })
 
-  observe({
-    if (isTruthy(carto_digital())){
-      shinyjs::enable("down_carto-downfile_bttn")
-    } else {
-      shinyjs::disable("down_carto-downfile_bttn")
-    }
-  })
+  mod_downfiles_server(
+    id = "down_carto",
+    x = reactive(rv$carto_digital),
+    name_save = list(Cartografia_digital = c(
+      "Area",
+      "Rodales",
+      "Limite_Predial",
+      "Suelos",
+      "Rangos_pend",
+      "Tabla_predios",
+      "Tabla_areas",
+      "Parcela",
+      "Uso_actual",
+      "Caminos",
+      "Caminos_osm",
+      "Hidrografia",
+      "Hidrografia_osm",
+      "Curvas_niv"
+    ) %>%
+      paste(.,input$NOMPREDIO, sep = "_") %>%
+      subset(
+        c(rep(T, 7),
+          input$add_parcelas,
+          input$add_uso_actual,
+          input$add_cam,
+          if(input$add_cam == F) F else input$add_cam_osm,
+          input$add_hidro,
+          if(input$add_hidro == F) F else input$add_hidro_osm,
+          input$add_CN
+        )
+      ))
+  )
 
-  # flextable::set_flextable_defaults(
-  #   decimal.mark = ",",
-  #   big.mark = "."
-  # )
-  #
-  # wb_planos <- eventReactive(carto_digital(),{
-  #   req(carto_digital())
-  #   var_suelo <- if (input$PAS == 148) dplyr::sym("Clase_Uso") else dplyr::sym("Clase_Eros")
-  #   nom_suelo <- if (input$PAS == 148) "Clase Uso Suelo" else "Grado de Erosión"
-  #
-  #   ft_planos_areas <- carto_digital()$tabla_areas %>%
-  #     dplyr::select(N_Predio, N_Area, Ran_Pend, !!var_suelo, Sup_ha) %>%
-  #     `names<-`(c("N° Predio", "Área N°", "Rango Pendiente (%)", nom_suelo, "Superficie área de corta (ha)")) %>%
-  #     flextable::flextable() %>%
-  #     flextable::merge_v(j = 1) %>%
-  #     flextable::autofit() %>%
-  #     flextable::theme_box() %>%
-  #     flextable::valign(part = "header", valign = "center") %>%
-  #     flextable::align(part = "header", align = "center")
-  #
-  #   ft_planos_predios <- carto_digital()$tabla_predios %>%
-  #     mutate(Pto_ref = NA_character_, Este = as.integer(NA), Norte = as.integer(NA)) %>%
-  #     dplyr::mutate(Pto_ref = NA_character_, Este = as.integer(NA), Norte = as.integer(NA)) %>%
-  #     dplyr::select(N_Predio, Nom_Predio, Propietari, Rol, Comuna, Sup_ha, Pto_ref, Este, Norte) %>%
-  #     dplyr::mutate_at(vars(Comuna), ~purrr::map_vec(., stringi::stri_split_regex, " - ")) %>%
-  #     tidyr::unnest(Comuna) %>%
-  #     dplyr::select(-c(dplyr::matches("provincia"), dplyr::matches("region"))) %>%
-  #     dplyr::left_join(
-  #       sf::read_sf(system.file("Comunas.gdb", package = "dataPAS")) %>%
-  #         sf::st_drop_geometry() %>%
-  #         dplyr::select(COMUNA, PROVINCIA, REGION) %>%
-  #         dplyr::rename_all(stringi::stri_trans_totitle)
-  #     ) %>%
-  #     dplyr::relocate(c(Provincia, Region), .after = Comuna) %>%
-  #     `names<-`(
-  #       c("N° Predio", "Nombre Predio", "Nombre del propietario/a", "ROL", "Comuna", "Provincia",
-  #         "Región", "Superficie predial (ha)", "Punto de referencia", "Este", "Norte")
-  #     ) %>%
-  #     flextable::flextable() %>%
-  #     flextable::merge_v(j = 1, target = c(1:4, 8)) %>%
-  #     flextable::merge_v(j = c(6, 7)) %>%
-  #     flextable::autofit() %>%
-  #     flextable::theme_box() %>%
-  #     flextable::valign(part = "header", valign = "center") %>%
-  #     flextable::align(part = "header", align = "center")
-  #
-  #   wb <- openxlsx2::wb_workbook() %>%
-  #     openxlsx2::wb_add_worksheet("Areas") %>%
-  #     flexlsx::wb_add_flextable(sheet = "Areas", ft = ft_planos_areas, start_col = 1, start_row = 1) %>%
-  #     openxlsx2::wb_add_worksheet("Predios") %>%
-  #     flexlsx::wb_add_flextable(sheet = "Predios", ft = ft_planos_predios, start_col = 1, start_row = 1)
-  #
-  #   return(wb)
-  # })
-
-  observeEvent(wb_planos(), {
-    mod_downfiles_server(
-      id = "down_tbl_planos",
-      x = wb_planos(),
-      name_save = c("Tablas_planos")
-    )
-  })
-
-  observe({
-    if (isTruthy(wb_planos())){
-      shinyjs::enable("down_tbl_planos-downfile_bttn")
-    } else {
-      shinyjs::disable("down_tbl_planos-downfile_bttn")
-    }
-  })
+  mod_downfiles_server(
+    id = "down_tbl_planos",
+    x = reactive(rv$wb_planos),
+    name_save = c("Tablas_planos")
+  )
 
   # Apendices ----
   observeEvent(input$portada, {
@@ -1032,36 +959,6 @@ app_server <- function(input, output, session) {
     })
   })
 
-  # observeEvent(input$PAS, {
-  #   output$cov_pas151_ui <- renderUI({
-  #     if (input$PAS == 151) {
-  #       tags$div(
-  #         tags$div(style = "margin-top: 10px"),
-  #         shinyWidgets::materialSwitch(
-  #           inputId = "cov_as_range",
-  #           label = "Presentar coberturas de las parcelas de flora como rango? (ej: '10-25')",
-  #           status = "success"
-  #         ),
-  #         tags$div(style = "margin-top: -5px"),
-  #         modal_cov_fp,
-  #         shinyWidgets::prettyRadioButtons(
-  #           inputId = "cov_fp",
-  #           label = "Cobertura indviduos 'fp', '---' o NA (%): ",
-  #           choices = c("0" = 0, "0,5" = 0.5, "1" = 1),
-  #           selected = "1",
-  #           inline = TRUE,
-  #           icon = icon("check"),
-  #           width = "280px",
-  #           status = "success",
-  #           animation = "jelly"
-  #         ) %>%
-  #           bsplus::shinyInput_label_embed(
-  #             bsplus::shiny_iconlink() %>% bsplus::bs_attach_modal(id_modal = 'ayuda_cov_fp')
-  #           )
-  #       )
-  #     }
-  #   })
-  # })
   ## Apendice 2 Y 3 ----
   observeEvent(input$add_bd_pcob,{
     output$add_bd_pcob_ui <- renderUI({
@@ -1248,7 +1145,7 @@ app_server <- function(input, output, session) {
       shinybusy::remove_modal_spinner()
     }, add = TRUE)
 
-    apendices_2y3(tryCatch({
+    rv$apendices_2y3 <- tryCatch({
       apendice_2_3(
         PAS = input$PAS,
         bd_flora = bd_flora(),
@@ -1260,9 +1157,11 @@ app_server <- function(input, output, session) {
         cov_fp = input$cov_fp,
         provincia = input$provincia,
         portada = input$portada,
-        portada_opts = portada_opts(tipo_proj = input$tipo_proj,
-                                    nom_proj = input$nom_proj,
-                                    logo = input$logo)
+        portada_opts = portada_opts(
+          tipo_proj = input$tipo_proj,
+          nom_proj = input$nom_proj,
+          logo = input$logo$datapath
+        )
       )
     }, error = function(e) {
       print(e)
@@ -1277,37 +1176,25 @@ app_server <- function(input, output, session) {
         animation = T
       )
       return(NULL)
-    }))
+    })
 
-    if (!is.null(apendices_2y3())) {
+    if (!is.null(rv$apendices_2y3)) {
       shinybusy::notify_success(
         text = "¡Listo! Apéndices 2 y 3 generados.",
         timeout = 3000, position = "right-bottom"
       )
     }
-    gc(reset = T)
-
-    mod_downfiles_server(
-      id = "down_apendices_2",
-      x = apendices_2y3()[[1]],
-      name_save = c("APÉNDICE 2. Densiadad de especies")
-    )
-    mod_downfiles_server(
-      id = "down_apendices_3",
-      x = apendices_2y3()[[2]],
-      name_save = c("APÉNDICE 3. Coordenadas ubicación de parcelas")
-    )
   })
-
-  observe({
-    if (isTruthy(apendices_2y3())){
-      shinyjs::enable("down_apendices_2-downfile_bttn")
-      shinyjs::enable("down_apendices_3-downfile_bttn")
-    } else {
-      shinyjs::disable("down_apendices_2-downfile_bttn")
-      shinyjs::disable("down_apendices_3-downfile_bttn")
-    }
-  })
+  mod_downfiles_server(
+    id = "down_apendices_2",
+    x = reactive(rv$apendices_2y3[[1]]),
+    name_save = c("Apéndice 2. Densidad de especies")
+  )
+  mod_downfiles_server(
+    id = "down_apendices_3",
+    x = reactive(rv$apendices_2y3[[2]]),
+    name_save = c("Apéndice 3. Coordenadas ubicación de parcelas")
+  )
 
   ## Atributos de rodal ----
   shinyjs::disable("get_tabla_attr_rod")
@@ -1333,7 +1220,7 @@ app_server <- function(input, output, session) {
       shinybusy::remove_modal_spinner()
     }, add = TRUE)
 
-    tabla_attr_rodal_0(tryCatch({
+    rv$tabla_attr_rodal_0 <- tryCatch({
       get_tabla_attr_rodal(
         PAS = input$PAS,
         bd_flora = bd_flora(),
@@ -1352,42 +1239,68 @@ app_server <- function(input, output, session) {
         animation = T
       )
       return(NULL)
-    }))
+    })
 
-    if (!is.null(tabla_attr_rodal_0())) {
+    if (!is.null(rv$tabla_attr_rodal_0)) {
       shinybusy::notify_success(
         text = "¡Listo! Cartografía digital generada.",
         timeout = 3000, position = "right-bottom"
       )
     }
-    gc(reset = T)
-
-    mod_downfiles_server(
-      id = "tabla_attr_rodal_0",
-      x = tabla_attr_rodal_0(),
-      name_save = c("Tabla atributacion de rodales")
-    )
   })
 
-  observe({
-    if (isTruthy(tabla_attr_rodal_0())){
-      shinyjs::enable("tabla_attr_rodal_0-downfile_bttn")
-    } else {
-      shinyjs::disable("tabla_attr_rodal_0-downfile_bttn")
-    }
-  })
+  mod_downfiles_server(
+    id = "tabla_attr_rodal_0",
+    x = reactive(rv$tabla_attr_rodal_0),
+    name_save = c("Tabla atributacion de rodales")
+  )
 
-  tabla_attr_rodal <- reactive({
+  observeEvent(input$tabla_attr_rodal, {
     req(input$tabla_attr_rodal)
-    openxlsx2::read_xlsx(input$tabla_attr_rodal$datapath)
+    rv$tabla_attr_rodal <- openxlsx2::read_xlsx(input$tabla_attr_rodal$datapath)
+  })
+   observeEvent(rv$tabla_attr_rodal, {
+     if(input$PAS == 148) {
+       check_input(
+         x = rv$tabla_attr_rodal,
+         names_req = c("N_Rodal", "Tipo_fores", "Subtipo_fo", "Tipo_veg", "Tipo_attr", "Nom_attr"),
+         id = "tabla_attr_rodal"
+       )
+     } else {
+       check_input(
+         x = rv$tabla_attr_rodal,
+         names_req = c("N_Rodal", "Tipo_veg", "Tipo_attr", "Nom_attr"),
+         id = "tabla_attr_rodal"
+       )
+     }
+   })
+
+  observeEvent(rv$tabla_attr_rodal, {
+    if(
+      rv$tabla_attr_rodal$Tipo_attr %>% 
+      unique() %>% 
+      stringi::stri_detect_regex("linea.*base", case_insensitive = T) %>% 
+      any()
+    ) {
+      shinyalert::shinyalert(
+        title = "Ojo",
+        text = "Se requiere ingresar parcelas de línea de base",
+        html = F,
+        type = "warning",
+        closeOnEsc = T,
+        showConfirmButton = T,
+        confirmButtonCol = "#6FB58F",
+        animation = T
+      )
+    }
   })
 
   ## Apendice 5 ----
   shinyjs::disable("get_apendice_5_btn")
   observe({
-    req(c(rodales_def(), bd_flora(), tabla_attr_rodal()))
-    req(carto_digital())
-    req(carto_digital()$tabla_predios, carto_digital()$tabla_areas)
+    req(c(rodales_def(), bd_flora(), rv$tabla_attr_rodal))
+    req(rv$carto_digital)
+    req(rv$carto_digital$tabla_predios, rv$carto_digital$tabla_areas)
     shinyjs::enable("get_apendice_5_btn")
   })
 
@@ -1431,13 +1344,13 @@ app_server <- function(input, output, session) {
     })
   })
 
-  bd_flora_2 <- reactive({
+  observeEvent(input$bd_flora_2, {
     req(input$bd_flora_2)
-    openxlsx2::read_xlsx(input$bd_flora_2$datapath)
+    rv$bd_flora_2 <- openxlsx2::read_xlsx(input$bd_flora_2$datapath)
   })
-  observeEvent(bd_flora_2(),{
+  observeEvent(rv$bd_flora_2,{
     check_input(
-      x = bd_flora_2(),
+      x = rv$bd_flora_2,
       names_req = c('Parcela', 'Especie', 'Cob_BB', 'Nha', 'Habito'),
       id = "bd_flora_2"
     )
@@ -1445,26 +1358,28 @@ app_server <- function(input, output, session) {
 
   ### add obras
   obras_ap5 <- mod_read_sf_server(id = "obras_ap5", crs = crs(), fx = function(x){
-    x %>%
-      dplyr::rename_all(~ ifelse(
-        . == "geometry", .,
-        stringi::stri_trans_totitle(
-          stringi::stri_trans_general(., "Latin-ASCII"),
-          type = "sentence"
-        )
-      ))
+  x %>%
+    dplyr::rename_all(~ ifelse(
+      . == "geometry", .,
+      stringi::stri_trans_totitle(
+        stringi::stri_trans_general(., "Latin-ASCII"),
+        type = "sentence"
+      )
+    ))
   })
   observeEvent(obras_ap5(),{
+    req(obras_ap5())
+    rv$obras_ap5 <- obras_ap5()
     if (isTruthy(input$form_nuevo)) {
       check_input(
-        x = obras_ap5(),
+        x = rv$obras_ap5,
         names_req = c('Tipo', 'Tipo_obra', 'Nom_obra', 'Fase'),
         huso = input$huso,
         id_reset = "obras_ap5-sf_file"
       )
     } else {
       check_input(
-        x = obras_ap5(),
+        x = rv$obras_ap5,
         names_req = c('Tipo', 'Obra'),
         huso = input$huso,
         id_reset = "obras_ap5-sf_file"
@@ -1472,44 +1387,10 @@ app_server <- function(input, output, session) {
     }
   })
 
-  # observeEvent(input$PAS,{
-  #   output$bd_fauna_ui <- renderUI({
-  #     if (input$PAS == 148) {
-        # fileInput(
-        #   inputId = "bd_fauna",
-        #   label = "Ingresar BD de fauna (opcional)",
-        #   multiple = F,
-        #   accept = c(".xlsx"),
-        #   buttonLabel = "Seleccionar",
-        #   placeholder = "Archivo no seleccionado"
-        # ) %>%
-        #   add_help_text(
-        #     title = "Campos minimos requeridos:\n'Nombre_cientifico', 'UTM_E', 'UTM_N', 'Categoria', 'Decreto'"
-        #   )
-  #     }
-  #   })
-  # })
-
-  # bd_fauna <- reactive({
-  #   req(input$bd_fauna$datapath)
-  #   openxlsx2::read_xlsx(input$bd_fauna$datapath) %>%
-  #     janitor::clean_names() %>%
-  #     dplyr::rename_all(~ stringi::stri_trans_totitle(
-  #       stringi::stri_trans_general(., "Latin-ASCII"),
-  #       type = "sentence")
-  #     ) %>%
-  #     dplyr::rename_at(dplyr::vars(dplyr::contains("utm")), stringi::stri_trans_toupper) %>%
-  #     dplyr::select(dplyr::matches('Nombre_cientifico|UTM_E|UTM_N|Categoria|Decreto'))
-  # })
-  # observeEvent(bd_fauna(),{
-  #   check_input(
-  #     x = bd_fauna(),
-  #     names_req = c('Nombre_cientifico', 'UTM_E', 'UTM_N', 'Categoria', 'Decreto'),
-  #     id = "bd_fauna"
-  #   )
-  # })
-
   observeEvent(input$get_apendice_5_btn, {
+    req(c(rodales_def(), bd_flora(), rv$tabla_attr_rodal))
+    req(rv$carto_digital)
+    req(rv$carto_digital$tabla_predios, rv$carto_digital$tabla_areas)
     shinybusy::show_modal_spinner(
       spin = "flower",
       color = "#6FB58F",
@@ -1526,63 +1407,56 @@ app_server <- function(input, output, session) {
       shinybusy::remove_modal_spinner()
     }, add = TRUE)
 
-    apendice_5(tryCatch({
+    rv$apendice_5 <- tryCatch({
       if (input$PAS == 148) {
         apendice_5_PAS148(
           bd_flora = bd_flora(),
           rodales = rodales_def(),
-          tabla_predios = carto_digital()$tabla_predios,
-          tabla_areas = carto_digital()$tabla_areas,
-          tabla_attr_rodal = tabla_attr_rodal(),
+          tabla_predios = rv$carto_digital$tabla_predios,
+          tabla_areas = rv$carto_digital$tabla_areas,
+          tabla_attr_rodal = rv$tabla_attr_rodal,
           umbral_sp_est = input$umbral_sp_est,
-          bd_flora_2 = bd_flora_2(),
+          bd_flora_2 = rv$bd_flora_2,
           portada = input$portada,
           provincia = input$provincia,
-          portada_opts = portada_opts(tipo_proj = input$tipo_proj, nom_proj = input$nom_proj, logo = input$logo),
-          carto_uso_actual = carto_digital()$Uso_actual,
-          areas = areas_def(),
-          obras = obras_ap5()
+          portada_opts = portada_opts(
+            tipo_proj = input$tipo_proj,
+            nom_proj = input$nom_proj,
+            logo = input$logo$datapath
+          ),
+          carto_uso_actual = if(isTruthy(rv$carto_digital$Uso_actual)) rv$carto_digital$Uso_actual else NULL,
+          areas = if(isTruthy(areas_def())) areas_def() else NULL,
+          obras = rv$obras_ap5
         )
       } else {
-        if (input$form_nuevo) {
-          apendice_5_PAS151_nuevo(
+        do.call(
+          if (isTruthy(input$form_nuevo)) apendice_5_PAS151_nuevo else apendice_5_PAS151,
+          list(
             bd_flora = bd_flora(),
             rodales = rodales_def(),
-            tabla_predios = carto_digital()$tabla_predios,
-            tabla_areas = carto_digital()$tabla_areas,
-            tabla_attr_rodal = tabla_attr_rodal(),
+            tabla_predios = rv$carto_digital$tabla_predios,
+            tabla_areas = rv$carto_digital$tabla_areas,
+            tabla_attr_rodal = rv$tabla_attr_rodal,
             cov_as_range = input$cov_as_range,
             cov_fp = input$cov_fp,
             umbral_sp_est = input$umbral_sp_est,
-            bd_flora_2 = bd_flora_2(),
-            portada = "default",
-            portada_opts = portada_opts(tipo_proj = input$tipo_proj, nom_proj = input$nom_proj, logo = input$logo),
+            bd_flora_2 = rv$bd_flora_2,
+            portada = input$portada,
+            portada_opts = portada_opts(
+              tipo_proj = input$tipo_proj,
+              nom_proj = input$nom_proj,
+              logo = input$logo$datapath
+            ),
             provincia = input$provincia,
-            areas = areas_def(),
-            obras = obras_ap5()
+            areas = if(isTruthy(areas_def())) areas_def() else NULL,
+          obras = rv$obras_ap5
           )
-        } else {
-          apendice_5_PAS151_nuevo(
-            bd_flora = bd_flora(),
-            rodales = rodales_def(),
-            tabla_predios = carto_digital()$tabla_predios,
-            tabla_areas = carto_digital()$tabla_areas,
-            tabla_attr_rodal = tabla_attr_rodal(),
-            cov_as_range = input$cov_as_range,
-            cov_fp = input$cov_fp,
-            umbral_sp_est = input$umbral_sp_est,
-            bd_flora_2 = bd_flora_2(),
-            portada = "default",
-            portada_opts = portada_opts(tipo_proj = input$tipo_proj, nom_proj = input$nom_proj, logo = input$logo),
-            provincia = input$provincia,
-            areas = areas_def(),
-            obras = obras_ap5()
-          )
-        }
+        )
       }
     }, error = function(e) {
+      print(e)
       shinyalert::shinyalert(
-        title = "Error al generar los apéndice 5!",
+        title = "Error al generar el apéndice 5!",
         text = as.character(e),
         html = TRUE,
         type = "error",
@@ -1591,31 +1465,23 @@ app_server <- function(input, output, session) {
         confirmButtonCol = "#6FB58F",
         animation = T
       )
-    }))
+      return(NULL)
+    })
 
-    if (!is.null(apendice_5())) {
+    if (!is.null(rv$apendice_5)) {
       shinybusy::notify_success(
         text = "¡Listo! Apéndice 5 generado.",
         timeout = 3000, position = "right-bottom"
       )
     }
 
-    gc(reset = T)
-
-    mod_downfiles_server(
-      id = "down_apendice_5",
-      x = apendice_5(),
-      name_save = c("APÉNDICE 5. Tablas formulario CONAF")
-    )
   })
+  mod_downfiles_server(
+    id = "down_apendice_5",
+    x = reactive(rv$apendice_5),
+    name_save = c("Apéndice 5. Tablas formulario CONAF")
+  )
 
-  observe({
-    if (isTruthy(apendice_5())){
-      shinyjs::enable("down_apendice_5-downfile_bttn")
-    } else {
-      shinyjs::disable("down_apendice_5-downfile_bttn")
-    }
-  })
 
   # Autor ----
   output$user <- shinydashboardPlus::renderUser({

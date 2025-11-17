@@ -34,7 +34,7 @@ get_pred_rod_area <- function(
     group_by_LB = NULL,
     sep_by_soil = TRUE,
     group_by_dist = FALSE,
-    distance_max = ifelse(group_by_dist == F, NULL, 50),
+    distance_max = NULL,
     cut_by_prov = FALSE,
     provincia = NULL,
     n_rodal_ord = FALSE,
@@ -55,6 +55,10 @@ get_pred_rod_area <- function(
       orden_rodal,
       choices = c("NS-EO","NS-OE","SN-EO","SN-OE","EO-NS","EO-SN","OE-NS","OE-SN")
     )
+  }
+
+  if (group_by_dist && is.null(distance_max)) {
+    distance_max <- 50
   }
 
   LB <- LB %>%
@@ -248,7 +252,7 @@ get_pred_rod_area <- function(
     dplyr::select(N_Predio, Nom_Predio, PID, N_Rodal, Tipo_Bos, Tipo_For, Tipo_fores, Subtipo_fo, Tipo_veg, F_ley20283, Sup_ha) %>%
     suppressWarnings() %>% suppressMessages()
 
-  if (any(Rodales %>%  dplyr::group_by(N_Rodal) %>%  dplyr::summarise_at("Sup_ha", sum) %>% .$Sup_ha < 0.5) & PAS == 148) {
+  if (any(Rodales %>%  dplyr::group_by(N_Rodal) %>%  dplyr::summarise_at("Sup_ha", sum) %>% .$Sup_ha < 0.5) & PAS %in% c(148, 149)) {
     warning(
       paste0(
         "Los siguientes rodales de BN presentan una superficie inferior a 0,5 ha:\n",
@@ -313,23 +317,23 @@ get_pred_rod_area <- function(
     dplyr::mutate_at(dplyr::vars(!!var_suelo), tidyr::replace_na, "S/I") %>%
     dplyr::filter(sf::st_area(geometry) %>% units::drop_units() %>% janitor::round_half_up(1) != 0) %>%
     {if (group_by_dist) {
-      .[] %>%
+      .[] %>% 
         dplyr::group_by(N_Rodal, N_Predio, !!var_suelo) %>%
         dplyr::mutate(group = group_by_distance(geometry, distance = distance_max)) %>%
         dplyr::group_by(N_Rodal, !!!group_list, Tipo_For, Tipo_veg, N_Pred_ori, !!var_suelo, group) %>%
         dplyr::summarise(geometry = sf::st_union(geometry)) %>%
         sf::st_collection_extract("POLYGON") %>%
         dplyr::ungroup()
-    } else .} %>%
+    } else .[]} %>%
     dplyr::mutate(
       Sup_ha = sf::st_area(geometry) %>% units::set_units(ha)%>% units::drop_units() %>% janitor::round_half_up(dec_sup),
       Sup_m2 = sf::st_area(geometry) %>% units::drop_units() %>% janitor::round_half_up()
     ) %>%
     dplyr::group_by(N_Predio) %>%
-    dplyr::mutate(sort_by_pred = st_order(geometry)) %>%
+    dplyr::mutate(sort_by_pred = st_order(geometry), order = orden_rodal, progress = F) %>%
     dplyr::ungroup() %>%
     dplyr::group_by(N_Rodal) %>%
-    dplyr::mutate(sort_by_rod = st_order(geometry)) %>%
+    dplyr::mutate(sort_by_rod = st_order(geometry), order = orden_rodal, progress = F) %>%
     dplyr::arrange(as.numeric(N_Rodal), sort_by_rod) %>%
     tibble::rowid_to_column("N_Area") %>%
     dplyr::ungroup() %>%
@@ -343,7 +347,7 @@ get_pred_rod_area <- function(
   comunas_sf <- sf::read_sf(
     system.file("Comunas.gdb", package = "dataPAS"),
     wkt_filter = sf::st_as_text(sf::st_geometry(sf::st_union(
-      sf::st_transform(predios, 5360)
+      sf::st_transform(predios %>% sf::st_make_valid(), 5360)
     )))
   ) %>%
     sf::st_set_geometry("geometry") %>%

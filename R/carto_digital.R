@@ -3,7 +3,7 @@
 #' @description
 #' Funciones diversas para elaborar la cartografia digital
 #'
-#' @param PAS PAS correspondiente. Ingresar \code{148} o \code{151}.
+#' @param PAS PAS correspondiente. Ingresar \code{148}, \code{149} o \code{151}.
 #' @param areas Objeto sf de las areas de corta.
 #' @param rodales Objeto sf con los rodales de las areas de corta.
 #' @param predios Objeto sf con los predios de las areas de corta.
@@ -191,9 +191,9 @@ cart_suelos <- function(PAS, areas, dec_sup = 2, from_RCA = F, RCA = NULL){
       {if (PAS == 151) {
         .[] %>% dplyr::mutate(
           Cat_Erosio = dplyr::case_when(
-            Clase_Eros %>% stringi::stri_detect_regex("moderada", case_insensitive = T) ~ "1",
-            Clase_Eros %>% stringi::stri_detect_regex("muy severa", case_insensitive = T) ~ "3",
-            Clase_Eros %>% stringi::stri_detect_regex("severa", case_insensitive = T) ~ "2",
+            Clase_Eros %>% stringi::stri_detect_regex("moderada|medio", case_insensitive = T) ~ "1",
+            Clase_Eros %>% stringi::stri_detect_regex("muy [severa|alto]", case_insensitive = T) ~ "3",
+            Clase_Eros %>% stringi::stri_detect_regex("severa1|alto", case_insensitive = T) ~ "2",
             .default = "4"
           )
         )
@@ -241,8 +241,7 @@ cart_rang_pend <- function(PAS, areas, dem, dec_sup = 2){
               Pend_media >= 0 & Pend_media < 10 ~ "0% - 10%",
               Pend_media >= 10 & Pend_media < 30 ~ "10% - 30%",
               Pend_media >= 30 & Pend_media < 45 ~ "30% - 45%",
-              Pend_media >= 45 & Pend_media < 60 ~ "45% - 60%",
-              Pend_media >= 60  ~ "60% y más",
+              Pend_media >= 60  ~ "45% y más",
               .default = as.character(Pend_media)
             )
           )
@@ -620,7 +619,6 @@ cart_hidro_osm <- function(predios, cut = c("clip", "buffer", "crop", "crop_by_r
 
 #' @rdname carto_digital
 #' @export
-#' @importFrom sf st_as_text st_crs
 cart_caminos <- function(predios, cut = c("clip", "buffer", "crop", "crop_by_row"), buffer = 0){
   valid_input(predios, inherit = "sf", names = c("Nom_Predio"))
   cut <- match.arg(cut)
@@ -634,7 +632,7 @@ cart_caminos <- function(predios, cut = c("clip", "buffer", "crop", "crop_by_row
   caminos <- tryCatch({
     sf::read_sf(
       system.file("Red_vial.gdb", package = "dataPAS"),
-      wkt_filter = st_as_text(
+      wkt_filter = sf::st_as_text(
         predios %>%
           sf::st_transform(5360) %>%
           sf::st_buffer(buffer) %>%
@@ -644,7 +642,7 @@ cart_caminos <- function(predios, cut = c("clip", "buffer", "crop", "crop_by_row
       )
     ) %>%
       sf::st_zm() %>%
-      sf::st_transform(st_crs(predios)) %>%
+      sf::st_transform(sf::st_crs(predios)) %>%
       {if(cut %in% c("clip", "buffer")){
         .[] %>% sf::st_intersection(predios %>% sf::st_buffer(buffer) %>% sf::st_union())
       } else if(cut == "crop"){
@@ -692,7 +690,6 @@ cart_caminos <- function(predios, cut = c("clip", "buffer", "crop", "crop_by_row
 
 #' @rdname carto_digital
 #' @export
-#' @importFrom osmdata add_osm_feature opq osmdata_sf
 cart_caminos_osm <- function(predios, cut = c("clip", "buffer", "crop", "crop_by_row"), buffer = 0){
   valid_input(predios, inherit = "sf", names = c("Nom_Predio"))
   cut <- match.arg(cut)
@@ -824,7 +821,6 @@ cart_curv_niv <- function(predios, dem, cut = c("clip", "buffer", "crop", "crop_
 
 #' @rdname carto_digital
 #' @export
-#' @importFrom dplyr rename_all
 get_carto_digital <- function(
     PAS,
     areas,
