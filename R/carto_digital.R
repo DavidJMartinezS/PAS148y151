@@ -9,6 +9,7 @@
 #' @param predios Objeto sf con los predios de las areas de corta.
 #' @param cut_by_prov Cortar predios por provincia.
 #' @param dem Objeto SpatRaster o ruta del archivo raster.
+#' @param stat_slope Resumir pendiente por 'mean' o 'median'.
 #' @param add_parcelas Logico; \code{TRUE} para incluir capa de parcelas.
 #' @param bd_flora Base de datos de flora. Incluir si `add_parcelas` es \code{TRUE}.
 #' @param cut_by_rod Seleccionar parcelas dentro de rodales.
@@ -17,7 +18,8 @@
 #' @param RCA Numero de la RCA aprobada. Icluir si `from_RCA` es \code{TRUE}. Default \code{NULL}.
 #' @param add_uso_actual Logico; \code{TRUE} para incluir capa de uso actual.
 #' @param catastro Objeto sf del catastro de CONAF.
-#' @param suelos Objeto sf con informacion de suelo.
+#' @param suelos_LB Objeto sf con la informacion de suelo de línea de base para áreas de corta.
+#' @param suelos Objeto sf con informacion de suelo para los predios.
 #' @param add_caminos Logico; \code{TRUE} para incluir capa de caminos.
 #' @param add_caminos_osm Logico; \code{TRUE} para incluir capa de caminos desde OpenStreetMap.
 #' @param caminos_arg Lista de argumentos para cortar capa de caminos. Default `cut`= 'clip'; `buffer` = 0.
@@ -157,7 +159,7 @@ cart_area <- function(PAS, areas, dec_sup = 2L, from_RCA = F, RCA = NULL){
 
 #' @rdname carto_digital
 #' @export
-cart_suelos <- function(PAS, areas, dec_sup = 2, from_RCA = F, RCA = NULL){
+cart_suelos <- function(PAS, areas, suelos_LB = NULL, dec_sup = 2, from_RCA = F, RCA = NULL){
   PAS <- match.arg(as.character(PAS), choices = c(148, 149, 151))
   valid_input(from_RCA, inherit = "logical")
   valid_input(RCA, inherit = c("character", "NULL"))
@@ -166,12 +168,15 @@ cart_suelos <- function(PAS, areas, dec_sup = 2, from_RCA = F, RCA = NULL){
   if (PAS %in% c(148, 149)) {
     valid_input(areas, inherit = "sf", names = c("Nom_Predio", "Clase_Uso"))
     var_suelo <- dplyr::syms("Clase_Uso")
-  }
-  if (PAS == 151) {
+  } else {
     valid_input(areas, inherit = "sf", names = c("Nom_Predio", "Clase_Eros"))
     var_suelo <- dplyr::syms(c("Cat_Erosio", "Clase_Eros"))
   }
-
+  if(!is.null(suelos_LB)) {
+    valid_input(suelos_LB, inherit = "sf", names = ifelse(PAS %in% c(148, 149), "Clase_Uso", "Clase_Eros"))
+    suelos_diss <- suelos_LB %>% dplyr::count(dplyr::across(!!!var_suelo[as.character(var_suelo) != "Cat_Erosio"])) %>% dplyr::select(-n)
+  }
+  
   fuente <- ifelse(
     !from_RCA,
     "Elaboración propia",
@@ -184,6 +189,10 @@ cart_suelos <- function(PAS, areas, dec_sup = 2, from_RCA = F, RCA = NULL){
 
   suelos <- tryCatch({
     areas %>%
+      {if(!is.null(suelos_LB)) {
+        .[] %>% dplyr::select(-c(!!!var_suelo[as.character(var_suelo) != "Cat_Erosio"]))%>% 
+          my_union(suelos_diss)
+      } else .} %>% 
       dplyr::mutate(
         Sup_ha = sf::st_area(geometry) %>% units::set_units(ha) %>% units::drop_units() %>% janitor::round_half_up(dec_sup),
         Fuente = fuente
@@ -193,7 +202,7 @@ cart_suelos <- function(PAS, areas, dec_sup = 2, from_RCA = F, RCA = NULL){
           Cat_Erosio = dplyr::case_when(
             Clase_Eros %>% stringi::stri_detect_regex("moderada|medio", case_insensitive = T) ~ "1",
             Clase_Eros %>% stringi::stri_detect_regex("muy [severa|alto]", case_insensitive = T) ~ "3",
-            Clase_Eros %>% stringi::stri_detect_regex("severa1|alto", case_insensitive = T) ~ "2",
+            Clase_Eros %>% stringi::stri_detect_regex("severa|alto", case_insensitive = T) ~ "2",
             .default = "4"
           )
         )
@@ -206,14 +215,15 @@ cart_suelos <- function(PAS, areas, dec_sup = 2, from_RCA = F, RCA = NULL){
 
 #' @rdname carto_digital
 #' @export
-cart_rang_pend <- function(PAS, areas, dem, dec_sup = 2){
+cart_rang_pend <- function(PAS, areas, dem, stat_slope = "median", dec_sup = 2){
   PAS <- match.arg(as.character(PAS), choices = c(148, 149, 151))
   valid_input(areas, inherit = "sf", names = c("Nom_Predio"))
   valid_dem(dem)
+  stat_slope <- match.arg(stat_slope, choices = c("median", "mean"))
   valid_input(dec_sup, inherit = c("integer", "numeric"))
 
   ran_pend <- tryCatch({
-    slope_per <- get_slope(dem = dem, x = areas)
+    slope_per <- get_slope(dem = dem, x = areas, stat = stat_slope)
     areas %>%
       dplyr::mutate(
         Pend_media = as.numeric(slope_per),
@@ -827,6 +837,8 @@ get_carto_digital <- function(
     rodales,
     predios,
     dem,
+    stat_slope = "median",
+    suelos_LB = NULL,
     cut_by_prov = NULL,
     add_parcelas = FALSE,
     bd_flora = NULL,
@@ -855,6 +867,7 @@ get_carto_digital <- function(
   valid_input(predios, inherit = "sf", names = c("N_Predio", "Nom_Predio", "Rol", "Propietari"))
   valid_input(cut_by_prov, inherit = c("NULL", "character"))
   valid_dem(dem)
+  stat_slope <- match.arg(stat_slope, choices = c("median", "mean"))
   valid_input(
     add_parcelas, cut_by_rod, include_fp, from_RCA, add_uso_actual,
     add_caminos, add_caminos_osm, add_hidro, add_hidro_osm, add_curv_niv, inherit = "logical"
@@ -899,9 +912,9 @@ get_carto_digital <- function(
 
   carto_area <- cart_area(PAS = PAS, areas = areas, dec_sup = dec_sup, from_RCA = from_RCA, RCA = RCA)
 
-  carto_suelos <- cart_suelos(PAS = PAS, areas = areas, dec_sup = dec_sup, from_RCA = from_RCA, RCA = RCA)
+  carto_suelos <- cart_suelos(PAS = PAS, areas = areas, suelos_LB = suelos_LB, dec_sup = dec_sup, from_RCA = from_RCA, RCA = RCA)
 
-  carto_ran_pend <- cart_rang_pend(PAS = PAS, areas = areas, dem = dem, dec_sup = dec_sup)
+  carto_ran_pend <- cart_rang_pend(PAS = PAS, areas = areas, dem = dem, stat_slope = stat_slope, dec_sup = dec_sup)
 
   carto_predios <- cart_predios(predios = predios, cut_by_prov = cut_by_prov, dec_sup = dec_sup)
 

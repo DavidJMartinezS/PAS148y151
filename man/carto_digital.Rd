@@ -21,9 +21,16 @@ cart_rodales(PAS, rodales, from_RCA = F, RCA = NULL, dec_sup = 2L)
 
 cart_area(PAS, areas, dec_sup = 2L, from_RCA = F, RCA = NULL)
 
-cart_suelos(PAS, areas, dec_sup = 2, from_RCA = F, RCA = NULL)
+cart_suelos(
+  PAS,
+  areas,
+  suelos_LB = NULL,
+  dec_sup = 2,
+  from_RCA = F,
+  RCA = NULL
+)
 
-cart_rang_pend(PAS, areas, dem, dec_sup = 2)
+cart_rang_pend(PAS, areas, dem, stat_slope = "median", dec_sup = 2)
 
 cart_predios(predios, cut_by_prov = NULL, dec_sup = 2)
 
@@ -70,6 +77,8 @@ get_carto_digital(
   rodales,
   predios,
   dem,
+  stat_slope = "median",
+  suelos_LB = NULL,
   cut_by_prov = NULL,
   add_parcelas = FALSE,
   bd_flora = NULL,
@@ -106,7 +115,11 @@ get_carto_digital(
 
 \item{areas}{Objeto sf de las areas de corta.}
 
+\item{suelos_LB}{Objeto sf con la informacion de suelo de línea de base para áreas de corta.}
+
 \item{dem}{Objeto SpatRaster o ruta del archivo raster.}
+
+\item{stat_slope}{Resumir pendiente por 'mean' o 'median'.}
 
 \item{predios}{Objeto sf con los predios de las areas de corta.}
 
@@ -120,7 +133,7 @@ get_carto_digital(
 
 \item{catastro}{Objeto sf del catastro de CONAF.}
 
-\item{suelos}{Objeto sf con informacion de suelo.}
+\item{suelos}{Objeto sf con informacion de suelo para los predios.}
 
 \item{fuente_hidro}{Fuente de la capa hidrografica. `MOP` o `BCN`.}
 

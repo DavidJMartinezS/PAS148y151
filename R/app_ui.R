@@ -40,7 +40,17 @@ app_ui <- function(request) {
                   inline = TRUE,
                   status = "primary",
                   fill = TRUE,
-                  animation = "smooth",
+                  animation = "smooth"
+                ),
+                shinyWidgets::prettyRadioButtons(
+                  inputId = "stat_slope",
+                  label = "Pendiente:  ",
+                  choices = c("median", "mean"),
+                  selected = "median",
+                  inline = TRUE,
+                  status = "primary",
+                  fill = TRUE,
+                  animation = "smooth"
                 ),
                 tags$div(
                   numericInput(

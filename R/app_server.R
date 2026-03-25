@@ -15,6 +15,7 @@ app_server <- function(input, output, session) {
 
   # Outputs ----
   rv <- reactiveValues(
+    stat_slope = "median",
     crs = NULL,
     distance = NULL,
     orden_rodales = NULL,
@@ -29,6 +30,9 @@ app_server <- function(input, output, session) {
     apendice_5 = NULL
   )
 
+  observeEvent(input$stat_slope, {
+    rv$stat_slope <- input$stat_slope
+  })
   observeEvent(input$distance, {
     rv$distance <- input$distance
   })
@@ -274,7 +278,7 @@ app_server <- function(input, output, session) {
   mod_check_carto_server("check_carto")
 
   ## Agregar pend e hidro ----
-  mod_add_attr_server("add_attr", PAS = input$PAS)
+  mod_add_attr_server("add_attr", PAS = reactive(input$PAS), stat_slope = reactive(input$stat_slope))
 
   ## Crear uso actual ----
   mod_uso_actual_server("uso_actual_1", crs = reactive(rv$crs), dec_sup = input$n_dec)
@@ -788,6 +792,8 @@ app_server <- function(input, output, session) {
         predios = predios_def(),
         cut_by_prov = if (input$cut_pred_by_prov) input$provincia else NULL,
         dem = input$dem$datapath,
+        stat_slope = input$stat_slope,
+        suelos_LB = if(isTruthy(suelos()) & !input$sep_by_soil) suelos() else NULL,
         add_parcelas = input$add_parcelas,
         bd_flora = bd_flora(),
         cut_by_rod = input$cut_bd_by_rodal,

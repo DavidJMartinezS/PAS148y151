@@ -11,7 +11,7 @@ group_by_distance(x, distance)
 
 my_union(x, y)
 
-get_slope(dem, x)
+get_slope(dem, x, stat = "median")
 
 st_order(x, order = "NS-OE", progress = F)
 }
@@ -21,6 +21,8 @@ st_order(x, order = "NS-OE", progress = F)
 \item{distance}{Distancia maxima para agrupar.}
 
 \item{dem}{Digital Elevation Model. Puede ser un objeto SpatRaster o bien la ruta de la imagen.}
+
+\item{stat}{Resumir pendiente por 'mean' o 'median'.}
 
 \item{order}{Orden espacial. see `details`.}
 

@@ -153,7 +153,7 @@ get_pred_rod_area <- function(
   } %>%
     suppressWarnings() %>% suppressMessages()
 
-  LB <- LB %>% {if (is.null(group_by_LB) & !("PID" %in% names(.))) tibble::rowid_to_column(., "PID") else .}
+  LB <- LB %>% {if (!("PID" %in% names(.))) tibble::rowid_to_column(., "PID") else .}
 
   group_list <- c("N_Predio", "Nom_Predio", "Tipo_fores") %>%
     {if (!is.null(group_by_LB)) c(., group_by_LB) %>% unique() else .} %>%
@@ -184,11 +184,12 @@ get_pred_rod_area <- function(
     dplyr::filter(sf::st_area(geometry) %>% units::drop_units() %>% janitor::round_half_up(1) != 0) %>%
     suppressWarnings() %>% suppressMessages()
 
-  Rodales <- LB %>%
+  Rod <- LB %>%
     dplyr::filter(PID %in% unique(areas$PID)) %>%
-    {if (n_rodal_ord) dplyr::mutate(., N_Rodal = st_order(geometry, order = orden_rodal)) else .} %>%
+    {if (n_rodal_ord) dplyr::mutate(., N_Rodal = st_order(geometry, order = orden_rodal)) else .} %>% 
     my_union(predios %>% dplyr::select(N_Predio, Nom_Predio)) %>%
-    sf::st_collection_extract("POLYGON") %>%
+    sf::st_collection_extract("POLYGON") 
+  Rodales <- Rod %>%
     {if (is.null(group_by_LB)){
       .[] %>%
         {if (n_rodal_ord) {
@@ -200,13 +201,19 @@ get_pred_rod_area <- function(
         dplyr::ungroup() %>%
         sf::st_collection_extract("POLYGON")
     } else {
-      .[] %>%
+      .[] %>% 
+        select(F_ley20283, !!!group_list) %>% 
         dplyr::group_by(F_ley20283, !!!group_list) %>%
         dplyr::summarise(geometry = sf::st_union(geometry)) %>%
         dplyr::ungroup() %>%
         sf::st_collection_extract("POLYGON") %>%
         sf::st_cast("POLYGON") %>%
-        tibble::rowid_to_column("PID") %>%
+        {if (n_rodal_ord){
+          .[] %>% 
+            sf::st_join(Rod %>% dplyr::select(N_Rodal), largest = T) %>% 
+            dplyr::arrange(N_Rodal)
+        } else .} %>% 
+        tibble::rowid_to_column("PID") %>% 
         {if (!c("Subtipo_fo", "Tipo_veg") %in% group_list %>% all()){
           .[] %>%
             sf::st_join(
@@ -226,7 +233,7 @@ get_pred_rod_area <- function(
         dplyr::group_by(PID) %>%
         dplyr::mutate(N_Rodal = as.integer(dplyr::cur_group_id())) %>%
         dplyr::ungroup()
-    }} %>%
+    }} %>% 
     dplyr::mutate(
       Tipo_Bos = tipo_bos,
       Tipo_For = dplyr::case_when(
@@ -283,6 +290,11 @@ get_pred_rod_area <- function(
 
   BN_areas <- areas %>%
     sf::st_join(Rodales %>% dplyr::select(N_Rodal, Tipo_For), largest = T) %>%
+    dplyr::count(N_Rodal, Tipo_For, !!!group_list) %>% select(-n) %>% 
+    sf::st_collection_extract("POLYGON") %>% 
+    sf::st_cast("POLYGON") %>%
+    sf::st_make_valid() %>%
+    sf::st_collection_extract("POLYGON") %>% 
     dplyr::mutate(N_Pred_ori = N_Predio) %>%
     dplyr::mutate_at("N_Predio", as.character) %>%
     dplyr::mutate_at(dplyr::vars(N_Predio, Nom_Predio), tidyr::replace_na, "S/I") %>%
@@ -294,6 +306,9 @@ get_pred_rod_area <- function(
     dplyr::select(-N_Predio) %>%
     dplyr::rename(N_Predio = N_Predio2) %>%
     dplyr::arrange(N_Predio) %>%
+    # {if(!is.null(group_by_LB)) {
+    #   .[] %>% group_by()
+    # }} %>% 
     {if (sep_by_soil) {
       .[] %>%
         st_intersection(suelos %>% dplyr::select(!!var_suelo)) %>%
@@ -310,8 +325,8 @@ get_pred_rod_area <- function(
     } else {
       .[] %>%
         sf::st_join(suelos %>% dplyr::select(!!var_suelo)) %>%
-        dplyr::group_by(N_Rodal, !!!group_list, N_Pred_ori, geometry) %>%
-        dplyr::summarise(var_suelo = paste(unique(!!var_suelo), collapse = " - ")) %>%
+        dplyr::group_by(N_Rodal, Tipo_For, !!!group_list, N_Pred_ori, geometry) %>%
+        dplyr::summarise(!!var_suelo := paste(unique(!!var_suelo), collapse = " - ")) %>%
         dplyr::ungroup()
     }} %>%
     dplyr::mutate_at(dplyr::vars(!!var_suelo), tidyr::replace_na, "S/I") %>%
@@ -320,7 +335,7 @@ get_pred_rod_area <- function(
       .[] %>% 
         dplyr::group_by(N_Rodal, N_Predio, !!var_suelo) %>%
         dplyr::mutate(group = group_by_distance(geometry, distance = distance_max)) %>%
-        dplyr::group_by(N_Rodal, !!!group_list, Tipo_For, Tipo_veg, N_Pred_ori, !!var_suelo, group) %>%
+        dplyr::group_by(N_Rodal, !!!group_list[as.character(group_list) != "Tipo_veg"], Tipo_For, Tipo_veg, N_Pred_ori, !!var_suelo, group) %>%
         dplyr::summarise(geometry = sf::st_union(geometry)) %>%
         sf::st_collection_extract("POLYGON") %>%
         dplyr::ungroup()

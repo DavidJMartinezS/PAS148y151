@@ -11,7 +11,7 @@
 #' @param dem Digital Elevation Model. Puede ser un objeto SpatRaster o bien la ruta de la imagen.
 #' @param order Orden espacial. see `details`.
 #' @param progress Valor logico. \code{TRUE} para que se mostrar una barra de progreso en la consola.
-#' @param method Resumir pendiente por 'mean' o 'median'.
+#' @param stat Resumir pendiente por 'mean' o 'median'.
 #'
 #' @details
 #' El argumento `order` consiste en una combinacion de 4 letras con las iniciales de los 4 puntos cardinales (N, S, E, O) separadas con un guión segun si es latitud o longitud. Por ejemplo, eel argumento por default tiene un orden \code{'NS-OE'}, lo cual indica que que se seguira un orden de Norte a Sur primeramente y de Oste a Este de manera secundaria.
@@ -56,10 +56,10 @@ my_union <- function(x, y) {
 
 #' @rdname spatial_functions
 #' @export
-get_slope <- function (dem, x, method = "median") {
+get_slope <- function (dem, x, stat = "median") {
   valid_dem(dem)
   valid_input(x, inherit = c("sf", "sfc"))
-  method = match.arg(method, choices = c("median", "mean"))
+  stat <- match.arg(stat, choices = c("median", "mean"))
 
   rast <- tryCatch({
     (if (inherits(dem, "SpatRaster")) dem else terra::rast(dem))
@@ -88,7 +88,7 @@ get_slope <- function (dem, x, method = "median") {
     {\(x) tan(x * pi / 180) * 100}() %>%
     terra::extract(y = x, touches = T) %>%
     dplyr::group_by(ID) %>%
-    {if(method == "mean") {
+    {if(stat == "mean") {
       dplyr::summarise(.[], slope = mean(slope, na.rm = T)) 
     } else {
       dplyr::summarise(.[], slope = median(slope, na.rm = T)) 
@@ -186,4 +186,3 @@ st_order <- function(x, order = "NS-OE", progress = F){
   }
   return(as.integer(ord))
 }
-

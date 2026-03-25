@@ -51,11 +51,11 @@ mod_add_attr_ui <- function(id) {
 #' add_attr Server Functions
 #'
 #' @noRd
-mod_add_attr_server <- function(id, PAS){
+mod_add_attr_server <- function(id, PAS, stat_slope){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
-    rv <- reactiveValues(shp_2 = NULL)
+    rv_local <- reactiveValues(shp_2 = NULL)
     shp <- mod_read_sf_server("sf_to_attr")
     shp_name <- mod_read_sf_server("sf_to_attr", path = T)
 
@@ -136,12 +136,12 @@ mod_add_attr_server <- function(id, PAS){
         shinybusy::remove_modal_spinner()
       }, add = TRUE)
 
-      rv$shp_2 <- tryCatch({
+      rv_local$shp_2 <- tryCatch({
         shp() %>%
           {if (input$add_pend_info) {
             .[] %>%
-              dplyr::mutate(Pend_media = get_slope(dem = input$dem_help$datapath, x = shp())) %>%
-              {if(PAS == 148){
+              dplyr::mutate(Pend_media = get_slope(dem = input$dem_help$datapath, x = shp(), stat = stat_slope())) %>%
+              {if(PAS() == 148){
                 .[] %>%
                   dplyr::mutate(
                     Ran_Pend = dplyr::case_when(
@@ -194,7 +194,7 @@ mod_add_attr_server <- function(id, PAS){
         )
         return(NULL)
       })
-      if (!is.null(rv$shp_ordered)) {
+      if (!is.null(rv_local$shp_2)) {
         shinybusy::notify_success(
           text = "¡Listo! Atributos añadidos.",
           timeout = 3000, position = "right-bottom"
@@ -203,12 +203,12 @@ mod_add_attr_server <- function(id, PAS){
     })
     mod_downfiles_server(
       id = "down_sf",
-      x = reactive(rv$shp_2),
+      x = reactive(rv_local$shp_2),
       name_save = shp_name()
     )
     mod_downfiles_server(
       id = "down_xlsx",
-      x = reactive(sf::st_drop_geometry(rv$shp_2)),
+      x = reactive(sf::st_drop_geometry(rv_local$shp_2)),
       name_save = shp_name()
     )
   })
